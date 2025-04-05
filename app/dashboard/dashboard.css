@@ -1,0 +1,89 @@
+/* app/dashboard/dashboard.css */
+
+/* We won’t style <body> directly 
+   so we don't affect the entire site. 
+   Instead, we’ll wrap everything in a 
+   .dashboard-page container. */
+
+   .dashboard-page {
+    font-family: Arial, sans-serif;
+    background: #f5f6fa;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    height: 100vh;
+  }
+  
+  /* SIDEBAR AREA */
+  .sidebar-container {
+    background: white;
+    width: 250px;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .sidebar {
+    background: transparent;
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: sticky;
+    top: 50%;
+    transform: translateY(-50%);
+    height: fit-content;
+    align-self: flex-start;
+  }
+  
+  .sidebar .card-button {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
+  }
+  
+  .sidebar .card-button:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* MAIN CONTENT AREA */
+  .main-content {
+    flex-grow: 1;
+    padding: 40px;
+  }
+  
+  .main-content h1 {
+    margin-top: 0;
+  }
+  
+  .course-list {
+    margin-top: 20px;
+  }
+  
+  .course-item {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+  
+  .course-item h3 {
+    margin: 0 0 8px;
+  }
+  
+  .course-actions a {
+    margin-right: 15px;
+    font-size: 0.9em;
+    color: #0077cc;
+    text-decoration: none;
+  }
+  
+  .course-actions a:hover {
+    text-decoration: underline;
+  }
