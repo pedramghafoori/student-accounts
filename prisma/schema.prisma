@@ -23,3 +23,10 @@ model User {
   email String  @unique
   name  String?
 }
+model OtpRecord {
+  id        String   @id @default(uuid())
+  email     String
+  otp       String
+  createdAt DateTime @default(now())
+  used      Boolean  @default(false)
+}
