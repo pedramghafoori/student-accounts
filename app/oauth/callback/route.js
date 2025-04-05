@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import jsforce from 'jsforce';
-import { getOAuth2, storeTokens } from '@/lib/salesforce';
+import { getOAuth2 } from '@/lib/salesforce';
+import redisClient from '@/lib/redisClient';
 
 export async function GET(request) {
   try {
@@ -18,8 +19,16 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Authorization failed: Tokens not received.' }, { status: 500 });
     }
 
-    // Store the tokens
-    storeTokens({
+    // Store the tokens in Redis
+    await redisClient.set(
+      'salesforce_tokens',
+      JSON.stringify({
+        accessToken: conn.accessToken,
+        refreshToken: conn.refreshToken,
+        instanceUrl: conn.instanceUrl
+      })
+    );
+    console.log('Salesforce tokens stored in Redis:', {
       accessToken: conn.accessToken,
       refreshToken: conn.refreshToken,
       instanceUrl: conn.instanceUrl

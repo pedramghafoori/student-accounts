@@ -6,6 +6,14 @@ import jsforce from 'jsforce';
 import { prisma } from '@/lib/prisma';
 
 import { getSystemTokens, getOAuth2 } from '@/lib/salesforce';
+import redisClient from '@/lib/redisClient';
+
+// NEW: Retrieve Salesforce tokens from Redis
+export async function getSystemTokensFromRedis() {
+  const tokenString = await redisClient.get('salesforce_tokens');
+  if (!tokenString) return { accessToken: null, refreshToken: null, instanceUrl: null };
+  return JSON.parse(tokenString);
+}
 
 export async function POST(request) {
   try {
@@ -28,8 +36,10 @@ export async function POST(request) {
       }
 
       // --- Check if this email is on any Salesforce Account using OAuth tokens ---
-      // Retrieve the previously-stored system user tokens
-      const { accessToken, refreshToken, instanceUrl } = getSystemTokens();
+      // Retrieve the previously-stored system user tokens from Redis
+
+      const { accessToken, refreshToken, instanceUrl } = await getSystemTokensFromRedis();
+      console.log('Retrieved system tokens from Redis in send OTP:', { accessToken, refreshToken, instanceUrl });
       if (!accessToken || !refreshToken || !instanceUrl) {
         // If we have no tokens, we can’t query Salesforce
         return NextResponse.json(
