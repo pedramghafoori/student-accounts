@@ -5,7 +5,7 @@ import { sign } from 'jsonwebtoken';
 import jsforce from 'jsforce';
 import { prisma } from '@/lib/prisma';
 
-import { getOAuth2, getSystemTokens } from '@/lib/salesforce';
+import { getSystemTokens, getOAuth2 } from '@/lib/salesforce';
 
 export async function POST(request) {
   try {

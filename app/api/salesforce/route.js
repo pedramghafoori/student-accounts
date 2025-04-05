@@ -11,7 +11,7 @@ import { getOAuth2, getStoredTokens } from '@/lib/salesforce';
 export async function GET() {
   try {
     // 1) Retrieve the JWT from our cookie
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('userToken')?.value;
     if (!token) {
       return NextResponse.json(
