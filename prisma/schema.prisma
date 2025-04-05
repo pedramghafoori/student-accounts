@@ -1,0 +1,25 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model SystemTokens {
+  id           Int      @id @default(1)
+  accessToken  String?  // can be nullable if you want
+  refreshToken String? 
+  instanceUrl  String?
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  // If you only ever have 1 row, you can enforce a single record:
+  // For example, do id = 1 and ignore inserts. Or unique constraints, etc.
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+}
