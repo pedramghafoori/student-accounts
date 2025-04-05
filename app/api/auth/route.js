@@ -54,6 +54,7 @@ export async function POST(request) {
         LIMIT 1
       `;
       const result = await conn.query(query);
+      console.log(`Salesforce query returned ${result.totalSize} record(s):`, result.records);
 
       if (result.totalSize === 0) {
         return NextResponse.json(
