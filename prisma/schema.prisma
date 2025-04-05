@@ -28,5 +28,6 @@ model OtpRecord {
   email     String
   otp       String
   createdAt DateTime @default(now())
+  expiry    DateTime
   used      Boolean  @default(false)
 }
