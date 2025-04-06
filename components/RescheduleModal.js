@@ -4,21 +4,37 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import axios from "axios";
 
+/**
+ * RescheduleModal
+ *
+ * Props:
+ * - courseType: string (the old course name or type)
+ * - onClose: function to close the modal
+ */
 export default function RescheduleModal({ courseType, onClose }) {
+  // step 1: show future courses, step 2: confirm old vs. new
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // futureCourses fetched from an endpoint, e.g. /api/futureCourses?courseType=...
   const [futureCourses, setFutureCourses] = useState([]);
+  // the user’s selected new course
   const [selectedNewCourse, setSelectedNewCourse] = useState(null);
-  const [rescheduleFee, setRescheduleFee] = useState("$50"); // Example fee
+
+  // sample data about old course (you might pass more if needed)
   const oldCourse = courseType || "Unknown course";
 
-  // 1) fetch future courses from your /api/futureCourses?courseType=...
+  // step 2: Fees
+  const [rescheduleFee, setRescheduleFee] = useState("$50"); // example
+
+  // 1) fetch future courses
   useEffect(() => {
     const fetchFutureCourses = async () => {
       try {
         setLoading(true);
         setError("");
+        // This endpoint should query Salesforce for future courses of the same course type.
         const res = await axios.get(`/api/futureCourses?courseType=${encodeURIComponent(courseType)}`);
         if (res.data.success) {
           setFutureCourses(res.data.courses);
@@ -37,35 +53,34 @@ export default function RescheduleModal({ courseType, onClose }) {
     }
   }, [courseType]);
 
-  // handle selecting a course
+  // 2) handle selecting a course
   const handleSelectCourse = (course) => {
     setSelectedNewCourse(course);
   };
 
-  // step 1 => step 2
+  // 3) handle Next button
   const handleNext = () => {
     if (!selectedNewCourse) {
-      alert("Please select a course first.");
+      alert("Please select a course first");
       return;
     }
     setStep(2);
   };
 
-  // final confirm
+  // 4) handle Confirm
   const handleConfirm = () => {
-    console.log("Confirm reschedule from old course:", oldCourse);
-    console.log("to new course:", selectedNewCourse);
-    console.log("Fee to be charged:", rescheduleFee);
-    // TODO: call your Salesforce API here to finalize rescheduling
+    // TODO: in real code, do the actual API call to Salesforce
+    console.log("Confirmed reschedule from old course:", oldCourse, "to new course:", selectedNewCourse);
+    console.log("Reschedule Fee will be charged:", rescheduleFee);
     onClose();
   };
 
-  // The actual modal content
+  // The main modal content
   const modalContent = (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
-      {/* Container for the modal box */}
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 relative">
-        {/* Close (X) in top right corner */}
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+      <div className="relative bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 
+                  max-h-[80vh] overflow-y-auto">
+        {/* Close (X) in top-right corner */}
         <button
           className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
           onClick={onClose}
@@ -75,14 +90,15 @@ export default function RescheduleModal({ courseType, onClose }) {
 
         {step === 1 && (
           <>
-            <h2 className="text-xl font-bold mb-4">
-              Reschedule Your Course: {oldCourse}
-            </h2>
+            <h2 className="text-xl font-bold mb-4">Reschedule Your Course: {oldCourse}</h2>
             <p className="text-gray-700 mb-4">
-              Select a future course to reschedule into:
+              Please select one of the future courses to reschedule into:
             </p>
+
             {loading && <p className="text-gray-500">Loading future courses...</p>}
             {error && <p className="text-red-600 mb-4">{error}</p>}
+
+            {/* Scrollable list of future courses */}
             <div className="space-y-4 max-h-72 overflow-y-auto">
               {futureCourses.map((course) => (
                 <div
@@ -95,15 +111,12 @@ export default function RescheduleModal({ courseType, onClose }) {
                   }`}
                 >
                   <h3 className="font-semibold">{course.Name}</h3>
-                  <p className="text-sm text-gray-600">
-                    Start: {course.Start_date_time__c}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Location: {course.Location__c}
-                  </p>
+                  <p className="text-sm text-gray-600">Start: {course.Start_date_time__c}</p>
+                  <p className="text-sm text-gray-600">Location: {course.Location__c}</p>
                 </div>
               ))}
             </div>
+
             <div className="mt-4 flex justify-end">
               <button
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -130,8 +143,8 @@ export default function RescheduleModal({ courseType, onClose }) {
               </p>
             </div>
             <p className="text-gray-700 mb-4">
-              By confirming, you agree to pay the additional fee (if any) and
-              move your enrollment to the new course.
+              By confirming, you agree to pay the additional fee (if any) and move
+              your enrollment to the new course.
             </p>
             <div className="flex justify-end space-x-4">
               <button
@@ -153,6 +166,6 @@ export default function RescheduleModal({ courseType, onClose }) {
     </div>
   );
 
-  // Use a portal to ensure the modal is rendered at the top level (document.body)
+  // Render using a portal so it isn't constrained by parent layout
   return createPortal(modalContent, document.body);
-};
+}

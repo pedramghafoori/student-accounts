@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 import Layout from "@/components/Layout";
-import RescheduleModal from "@/components/RescheduleModal"; // new modal component
 
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState([]);
@@ -11,8 +11,8 @@ export default function DashboardPage() {
   const [batches, setBatches] = useState([]);
   const [policy, setPolicy] = useState(null);
   const [error, setError] = useState("");
-  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
-  const [courseTypeForReschedule, setCourseTypeForReschedule] = useState("");
+
+  const router = useRouter();
 
   /**
    * parseCourseName
@@ -241,8 +241,8 @@ export default function DashboardPage() {
                                   href="#"
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    setCourseTypeForReschedule(course);
-                                    setShowRescheduleModal(true);
+                                    // Navigate to /reschedule with the course name or ID
+                                    router.push(`/reschedule?oldCourseName=${encodeURIComponent(course)}&oldCourseId=${enr.Id}`);
                                   }}
                                   className="text-blue-500 underline mb-2"
                                 >
@@ -308,16 +308,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-      {showRescheduleModal && (
-        <RescheduleModal
-          courseType={courseTypeForReschedule}
-          onClose={() => setShowRescheduleModal(false)}
-          onSelectCourse={(selectedCourse) => {
-            console.log("Selected new course:", selectedCourse);
-            setShowRescheduleModal(false);
-          }}
-        />
-      )}
     </Layout>
   );
 }
