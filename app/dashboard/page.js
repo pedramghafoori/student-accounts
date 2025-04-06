@@ -10,43 +10,46 @@ export default function DashboardPage() {
   const [batches, setBatches] = useState([]);
   const [error, setError] = useState("");
 
-  // Helper to parse an example string like:
-  // "March 29 - April 6 National Lifeguard - Pool - TMU"
-  // into:
-  //   courseDates => "March 29 - April 6"
-  //   course => "National Lifeguard - Pool"
-  //   location => "TMU"
+  /**
+   * parseCourseName
+   *
+   * Handles various string formats, for example:
+   *   1) "March 29 - April 6 National Lifeguard - Pool - TMU"
+   *      -> multiple dashes (>=3)
+   *   2) "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
+   *      -> single dash (== 2 parts)
+   *
+   * Returns:
+   *   { courseDates, course, location }
+   */
   function parseCourseName(fullName = "") {
-    // Split by " - ":
-    // e.g. ["March 29", "April 6 National Lifeguard", "Pool", "TMU"]
+    // Split by " - "
     let splitted = fullName.split(" - ");
-
     let location = "";
     let courseDates = "";
     let course = fullName; // fallback if parse fails
 
+    // 1) If there are 3+ parts => multi-dash scenario
     if (splitted.length >= 3) {
-      // location is the last item
+      // The final piece is the location
       location = splitted[splitted.length - 1];
-      // remove it
-      splitted.pop();
+      splitted.pop(); // remove location from the array
 
-      // now splitted might be ["March 29", "April 6 National Lifeguard", "Pool"]
-      // first 2 items might contain the date portion
-      const first = splitted[0] || ""; // e.g. "March 29"
-      const second = splitted[1] || ""; // e.g. "April 6 National Lifeguard"
+      // Now splitted might be ["March 29", "April 6 National Lifeguard", "Pool"]
+      const first = splitted[0] || "";
+      const second = splitted[1] || "";
 
-      // Attempt to parse the second chunk further:
-      let secondParts = second.split(" "); // e.g. ["April","6","National","Lifeguard"]
+      let secondParts = second.split(" ");
       if (secondParts.length >= 2) {
+        // e.g. "March 29 - April 6"
         courseDates = first + " - " + secondParts[0] + " " + secondParts[1];
-        // remainder => secondParts.slice(2).join(" ") => "National Lifeguard"
-        const remainderCourse = secondParts.slice(2).join(" "); // e.g. "National Lifeguard"
 
-        // If splitted has a 3rd item => e.g. "Pool", we attach it
+        // remainderCourse => e.g. "National Lifeguard"
+        const remainderCourse = secondParts.slice(2).join(" ");
+
+        // If we had exactly 3 items, splitted[2] might be "Pool"
         if (splitted.length === 3) {
           // Combine remainderCourse + " - " + splitted[2]
-          // e.g. "National Lifeguard" + " - " + "Pool" => "National Lifeguard - Pool"
           course = remainderCourse + (splitted[2] ? " - " + splitted[2] : "");
         } else {
           course = remainderCourse;
@@ -54,6 +57,25 @@ export default function DashboardPage() {
       } else {
         // fallback
         courseDates = first + " - " + second;
+      }
+
+    // 2) If exactly 2 parts => single dash scenario
+    } else if (splitted.length === 2) {
+      // e.g. ["May 24-25 Standard First Aid with CPR-C (SFA)", "TMU"]
+      location = splitted[1];
+
+      // Regex to capture leading "Month day-day"
+      const re = /^([A-Za-z]+\s+\d+-\d+)(\s+.*)?$/;
+      const match = splitted[0].match(re);
+      if (match) {
+        // group1 => e.g. "May 24-25"
+        // group2 => e.g. " Standard First Aid with CPR-C (SFA)"
+        courseDates = match[1].trim();
+        const remainder = (match[2] || "").trim();
+        course = remainder; // e.g. "Standard First Aid with CPR-C (SFA)"
+      } else {
+        // fallback if regex doesn't match
+        course = splitted[0];
       }
     }
 
@@ -68,8 +90,8 @@ export default function DashboardPage() {
       .get("/api/salesforce")
       .then((res) => {
         if (res.data.success) {
-          // If single 'account' is returned, wrap it in an array
           if (res.data.account) {
+            // If single 'account' is returned, wrap it in an array
             setAccounts([res.data.account]);
           } else if (res.data.accounts) {
             setAccounts(res.data.accounts);
@@ -161,39 +183,38 @@ export default function DashboardPage() {
                   {/* Show the Batches (i.e. subRecords) */}
                   {batches.length > 0 ? (
                     <div>
-                      <h3 className="font-semibold mt-4 mb-4">Related Course Batches</h3>
+                      <h3 className="font-semibold mt-4 mb-4">
+                        Related Course Batches
+                      </h3>
 
                       {batches.map((enr) => {
-                        // 1) parse the name
-                        const { courseDates, course, location } = parseCourseName(enr.CourseName);
-                        // 2) Decide if course has passed or not
+                        const { courseDates, course, location } =
+                          parseCourseName(enr.CourseName);
+
                         const hasPassed = enr.DaysUntilStart < 0;
 
                         return (
-                          /* 3) Instead of <li>, create a separate card for each course */
-                          <div key={enr.Id} className="bg-white shadow p-4 mb-4">
+                          <div
+                            key={enr.Id}
+                            className="bg-white shadow p-4 mb-4"
+                          >
                             {/* Display the info */}
-                            {/* - The first chunk is "courseDates" => e.g. "March 29 - April 6" */}
                             <p>
                               <strong>Course Dates:</strong> {courseDates}
                             </p>
-
-                            {/* - The second chunk is "course", e.g. "National Lifeguard - Pool" */}
                             <p>
                               <strong>Course:</strong> {course}
                             </p>
-
-                            {/* - The location is the final chunk, e.g. "TMU" */}
                             <p>
                               <strong>Location:</strong> {location}
                             </p>
 
-                            {/* If course is in the future, show Days Until. Else show "Course has passed" */}
                             {hasPassed ? (
                               <p>Course has passed</p>
                             ) : (
                               <p>
-                                <strong>Days Until:</strong> {enr.DaysUntilStart}
+                                <strong>Days Until:</strong>{" "}
+                                {enr.DaysUntilStart}
                               </p>
                             )}
                           </div>
@@ -215,7 +236,6 @@ export default function DashboardPage() {
 
             {/* RIGHT COLUMN: Account cards */}
             <div className="w-1/3">
-              {/* Show loading if no accounts and no error */}
               {accounts.length === 0 && !error && (
                 <p className="text-gray-700">Loading or no accounts found...</p>
               )}
@@ -224,7 +244,9 @@ export default function DashboardPage() {
                 <div
                   key={acc.Id}
                   className={`mb-4 bg-white rounded-lg shadow p-4 cursor-pointer hover:bg-blue-50 transition-colors ${
-                    selectedAccount?.Id === acc.Id ? "border-2 border-blue-500" : ""
+                    selectedAccount?.Id === acc.Id
+                      ? "border-2 border-blue-500"
+                      : ""
                   }`}
                   onClick={() => handleSelect(acc.Id)}
                 >
