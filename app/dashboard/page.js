@@ -3,12 +3,16 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Layout from "@/components/Layout";
+import RescheduleModal from "@/components/RescheduleModal"; // new modal component
 
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [batches, setBatches] = useState([]);
+  const [policy, setPolicy] = useState(null);
   const [error, setError] = useState("");
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [courseTypeForReschedule, setCourseTypeForReschedule] = useState("");
 
   /**
    * parseCourseName
@@ -31,7 +35,6 @@ export default function DashboardPage() {
 
       const first = splitted[0] || "";
       const second = splitted[1] || "";
-
       let secondParts = second.split(" ");
       if (secondParts.length >= 2) {
         courseDates = first + " - " + secondParts[0] + " " + secondParts[1];
@@ -57,11 +60,47 @@ export default function DashboardPage() {
         course = splitted[0];
       }
     }
-
     return { courseDates, course, location };
   }
 
-  // 1) Fetch Accounts on Mount
+  /**
+   * getPolicyForCourse
+   *
+   * Given the number of days until the course starts and the policy object,
+   * returns an object with the appropriate refund and reschedule messages.
+   */
+  function getPolicyForCourse(daysUntilStart, policy) {
+    if (!policy) {
+      return { refund: "", reschedule: "" };
+    }
+    const refundPolicy = policy.refundPolicy;
+    const reschedulePolicy = policy.reschedulePolicy;
+    if (daysUntilStart > 5) {
+      return {
+        refund: refundPolicy["More than 5 days1*"],
+        reschedule: reschedulePolicy["More than 5 days1*"],
+      };
+    } else if (daysUntilStart <= 5 && daysUntilStart >= 3) {
+      return {
+        refund: refundPolicy["3-5 days1*"],
+        reschedule: reschedulePolicy["3-5 days1*"],
+      };
+    } else if (daysUntilStart < 3 && daysUntilStart >= 0) {
+      return {
+        refund: refundPolicy["2 days or less1*"],
+        reschedule: reschedulePolicy["2 days or less1*"],
+      };
+    } else {
+      return {
+        refund: refundPolicy["After course begins"],
+        reschedule: reschedulePolicy["After course begins"],
+      };
+    }
+  }
+
+  /******************************************************
+   * 1) Fetch Accounts on Mount
+   ******************************************************/
   useEffect(() => {
     axios
       .get("/api/salesforce")
@@ -81,13 +120,42 @@ export default function DashboardPage() {
       .catch((err) => setError(err.message));
   }, []);
 
-  // 2) Handle Account Selection (Sidebar will call handleSelect)
+  /******************************************************
+   * 2) Dynamically Fetch Refund Policy (Poll every 5 minutes)
+   ******************************************************/
+  useEffect(() => {
+    const fetchPolicy = () => {
+      axios
+        .get("/api/refund-policy")
+        .then((res) => {
+          console.log("Refund policy response:", res.data);
+          if (res.data.success) {
+            setPolicy(res.data.policy);
+          } else {
+            console.error("Error fetching policy:", res.data.message);
+          }
+        })
+        .catch((err) =>
+          console.error("Error fetching policy:", err.message)
+        );
+    };
+
+    fetchPolicy(); // initial fetch
+    const intervalId = setInterval(fetchPolicy, 300000); // 5 minutes
+    return () => clearInterval(intervalId);
+  }, []);
+
+  /******************************************************
+   * 3) Handle Account Selection
+   ******************************************************/
   const handleSelect = (accountId) => {
     const account = accounts.find((a) => a.Id === accountId);
     setSelectedAccount(account);
   };
 
-  // 3) Fetch Batches whenever selectedAccount changes
+  /******************************************************
+   * 4) Fetch Batches for Selected Account
+   ******************************************************/
   useEffect(() => {
     if (!selectedAccount) return;
 
@@ -118,10 +186,9 @@ export default function DashboardPage() {
       <div className="container mx-auto py-10 px-6">
         <h1 className="text-3xl font-semibold mb-6">Accounts</h1>
         {error && <p className="text-red-600 mb-4">{error}</p>}
-
-        {/* Main content area for selected account’s courses */}
         <div className="flex">
-          <div className="flex-1 bg-white shadow p-6 rounded-lg">
+          {/* Main content area for the selected account’s courses */}
+          <div className="flex-1 ml-6 bg-white shadow p-6 rounded-lg">
             {selectedAccount ? (
               <div>
                 <h2 className="text-xl font-bold mb-4">
@@ -135,7 +202,12 @@ export default function DashboardPage() {
                     {batches.map((enr) => {
                       const { courseDates, course, location } =
                         parseCourseName(enr.CourseName);
+                      const threshold =
+                        (policy && policy.daysBeforeReschedule) || 2;
                       const hasPassed = enr.DaysUntilStart < 0;
+                      console.log(
+                        `Card ${enr.Id}: DaysUntilStart = ${enr.DaysUntilStart}, Policy Threshold = ${threshold}`
+                      );
                       return (
                         <div
                           key={enr.Id}
@@ -163,28 +235,57 @@ export default function DashboardPage() {
                             </div>
                           </div>
                           <div className="card-footer mt-4 flex flex-col items-end">
-                            {enr.DaysUntilStart > 2 ? (
+                            {enr.DaysUntilStart > threshold ? (
                               <>
                                 <a
                                   href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setCourseTypeForReschedule(course);
+                                    setShowRescheduleModal(true);
+                                  }}
                                   className="text-blue-500 underline mb-2"
                                 >
-                                  Reschedule
+                                  Reschedule (
+                                  {policy?.reschedulePolicy &&
+                                    getPolicyForCourse(
+                                      enr.DaysUntilStart,
+                                      policy
+                                    ).reschedule}
+                                  )
                                 </a>
                                 <a
                                   href="#"
                                   className="text-blue-500 underline"
                                 >
-                                  Refund
+                                  Refund (
+                                  {policy?.refundPolicy &&
+                                    getPolicyForCourse(
+                                      enr.DaysUntilStart,
+                                      policy
+                                    ).refund}
+                                  )
                                 </a>
                               </>
                             ) : (
                               <>
                                 <span className="text-blue-300 underline mb-2">
-                                  Reschedule
+                                  Reschedule (
+                                  {policy?.reschedulePolicy &&
+                                    getPolicyForCourse(
+                                      enr.DaysUntilStart,
+                                      policy
+                                    ).reschedule}
+                                  )
                                 </span>
                                 <span className="text-blue-300 underline">
-                                  Refund
+                                  Refund (
+                                  {policy?.refundPolicy &&
+                                    getPolicyForCourse(
+                                      enr.DaysUntilStart,
+                                      policy
+                                    ).refund}
+                                  )
                                 </span>
                               </>
                             )}
@@ -207,6 +308,16 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      {showRescheduleModal && (
+        <RescheduleModal
+          courseType={courseTypeForReschedule}
+          onClose={() => setShowRescheduleModal(false)}
+          onSelectCourse={(selectedCourse) => {
+            console.log("Selected new course:", selectedCourse);
+            setShowRescheduleModal(false);
+          }}
+        />
+      )}
     </Layout>
   );
 }

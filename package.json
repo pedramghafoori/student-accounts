@@ -9,6 +9,7 @@
   "dependencies": {
     "@prisma/client": "^6.5.0",
     "axios": "^1.8.4",
+    "cheerio": "^1.0.0",
     "jsforce": "^3.7.0",
     "jsonwebtoken": "^9.0.2",
     "next": "latest",
