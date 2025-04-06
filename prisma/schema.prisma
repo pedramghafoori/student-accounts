@@ -31,3 +31,12 @@ model OtpRecord {
   expiry    DateTime
   used      Boolean  @default(false)
 }
+// MagicLink
+model MagicLink {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
