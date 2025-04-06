@@ -13,6 +13,7 @@ async function getSystemTokensFromRedis() {
     const tokenString = await redisClient.get('salesforce_tokens');
     if (!tokenString) return { accessToken: null, refreshToken: null, instanceUrl: null };
     return JSON.parse(tokenString);
+}
 
 export async function GET() {
   try {
@@ -66,30 +67,43 @@ export async function GET() {
     });
     console.log("Created Salesforce connection with tokens");
 
-    // 5) Query Salesforce. Using PersonEmail on the Account object (Person Account)
-    const query = `
-      SELECT Id, Name, PersonEmail
-      FROM Account
-      WHERE PersonEmail = '${userEmail}'
-    `;
-    console.log("Executing Salesforce query:", query);
-    const result = await conn.query(query);
-    console.log(`Salesforce query returned ${result.totalSize} record(s):`, result.records);
-
-    if (result.totalSize === 0) {
-      console.error("No matching Salesforce account found for email:", userEmail);
-      return NextResponse.json(
-        { success: false, message: 'No matching account found' },
-        { status: 404 }
-      );
-    }
-
-    // 6) Return the first matching record
-    console.log("Returning Salesforce account:", result.records[0]);
-    return NextResponse.json({
-      success: true,
-      account: result.records[0],
-    });
+        // 5) Query Salesforce for the Account record using PersonEmail on the Account object (Person Account)
+        const accountQuery = `
+          SELECT Id, Name, PersonEmail
+          FROM Account
+          WHERE PersonEmail = '${userEmail}'
+          LIMIT 1
+        `;
+        console.log("Executing Salesforce account query:", accountQuery);
+        const accountResult = await conn.query(accountQuery);
+        console.log(`Salesforce account query returned ${accountResult.totalSize} record(s):`, accountResult.records);
+    
+        if (accountResult.totalSize === 0) {
+          console.error("No matching Salesforce account found for email:", userEmail);
+          return NextResponse.json(
+            { success: false, message: 'No matching account found' },
+            { status: 404 }
+          );
+        }
+        const account = accountResult.records[0];
+        console.log("Retrieved Salesforce account:", account);
+    
+        // 6) Query Salesforce for Opportunities related to the account
+        const oppQuery = `
+          SELECT Id, Name, StageName, CloseDate, Amount, AccountId
+          FROM Opportunity
+          WHERE AccountId = '${account.Id}'
+        `;
+        console.log("Executing Salesforce opportunities query:", oppQuery);
+        const oppResult = await conn.query(oppQuery);
+        console.log(`Salesforce opportunities query returned ${oppResult.totalSize} record(s):`, oppResult.records);
+  
+        // 7) Return both the account and the related opportunities
+        return NextResponse.json({
+          success: true,
+          account,
+          opportunities: oppResult.records,
+        });
   } catch (error) {
     console.error("Salesforce Error in GET /api/salesforce route:", error);
     return NextResponse.json(
