@@ -15,7 +15,6 @@ export default function ReschedulePage() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Use the correct parameter name passed in the URL
   const oldCourseName = searchParams.get("oldCourseName") || "";
   const oldCourseId = searchParams.get("oldCourseId");
 
@@ -49,18 +48,16 @@ export default function ReschedulePage() {
     fetchFutureCourses();
   }, [oldCourseName]);
 
-  // Compute unique locations from the fetched courses as objects { id, name }
+  // Compute unique locations from the fetched courses
   const uniqueLocations = useMemo(() => {
-    const locsMap = {};
+    const locsSet = new Set();
     futureCourses.forEach((course) => {
-      // Check if related Location__r.Name exists, otherwise use Location__c
-      const locId = course.Location__c;
-      const locName = course.Location__r && course.Location__r.Name ? course.Location__r.Name : locId;
-      if (locId) {
-        locsMap[locId] = locName;
+      const locationName = course.Location__r?.Name || course.Location__c;
+      if (locationName) {
+        locsSet.add(locationName);
       }
     });
-    return Object.entries(locsMap).map(([id, name]) => ({ id, name }));
+    return Array.from(locsSet).map((loc) => ({ id: loc, name: loc }));
   }, [futureCourses]);
 
   // Filter courses based on selected locations.
@@ -68,9 +65,10 @@ export default function ReschedulePage() {
     if (selectedLocations.length === 0) {
       return futureCourses;
     }
-    return futureCourses.filter((course) =>
-      selectedLocations.includes(course.Location__c)
-    );
+    return futureCourses.filter((course) => {
+      const locationName = course.Location__r?.Name || course.Location__c;
+      return selectedLocations.includes(locationName);
+    });
   }, [futureCourses, selectedLocations]);
 
   // Toggle a location in the filter
@@ -82,9 +80,21 @@ export default function ReschedulePage() {
     );
   };
 
-  // 2) Handle selecting a future course
+  // Toggle course selection: unselect if same course is clicked again
   const handleSelectCourse = (course) => {
-    setSelectedNewCourse(course);
+    if (selectedNewCourse && selectedNewCourse.Id === course.Id) {
+      setSelectedNewCourse(null);
+    } else {
+      setSelectedNewCourse(course);
+    }
+  };
+
+  // Helper function to calculate days until the course start date
+  const getDaysUntil = (startDate) => {
+    const start = new Date(startDate);
+    const today = new Date();
+    const diffTime = start.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   // 3) Next step (disabled if no course selected)
@@ -99,14 +109,13 @@ export default function ReschedulePage() {
   // 4) Confirm reschedule
   const handleConfirm = () => {
     console.log("Rescheduling from:", oldCourseName, "to:", selectedNewCourse);
-    // Finalize the reschedule (e.g. API call) then navigate away
     router.push("/dashboard"); // placeholder navigation
   };
 
   // 5) Handle "Nevermind, keep my current course"
   const handleKeepCurrent = () => {
     console.log("Keeping current course, no reschedule.");
-    router.push("/dashboard"); // or another appropriate route
+    router.push("/dashboard");
   };
 
   return (
@@ -160,7 +169,10 @@ export default function ReschedulePage() {
                     Start: {course.Start_date_time__c}
                   </p>
                   <p className="text-sm text-gray-600">
-                    Location: {course.Location__r && course.Location__r.Name ? course.Location__r.Name : course.Location__c}
+                    Location:{" "}
+                    {course.Location__r && course.Location__r.Name
+                      ? course.Location__r.Name
+                      : course.Location__c}
                   </p>
                   <p className="text-sm text-gray-600">
                     {/* Days until snippet */}
@@ -168,7 +180,8 @@ export default function ReschedulePage() {
                       <span className="text-red-500">Course has passed</span>
                     ) : (
                       <span>
-                        <strong>Days Until:</strong> {course.DaysUntilStart}
+                        <strong>Days Until:</strong>{" "}
+                        {getDaysUntil(course.Start_date_time__c)}
                       </span>
                     )}
                   </p>
@@ -176,7 +189,7 @@ export default function ReschedulePage() {
               );
             })}
           </div>
-          <div className="mt-4 flex justify-between">
+          <div className="mt-4 flex justify-end space-x-4">
             <button
               onClick={handleKeepCurrent}
               className="border border-gray-300 px-4 py-2 rounded hover:bg-gray-100"
@@ -213,8 +226,8 @@ export default function ReschedulePage() {
             </p>
           </div>
           <p className="text-gray-700 mb-4">
-            By confirming, you agree to pay the additional fee (if any) and
-            move your enrollment to the new course.
+            By confirming, you agree to pay the additional fee (if any) and move
+            your enrollment to the new course.
           </p>
           <div className="flex justify-end space-x-4">
             <button

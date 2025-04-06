@@ -56,7 +56,7 @@ export async function GET(request) {
 
     // Build the SOQL query for future courses using the retrieved productId
     const query = `
-      SELECT Id, Name, Start_date_time__c, Location__c
+      SELECT Id, Name, Start_date_time__c, Location__c, Location__r.Name
       FROM Batch__c
       WHERE Product__c = '${productId}' AND Start_date_time__c > TODAY
       ORDER BY Start_date_time__c ASC
@@ -67,6 +67,9 @@ export async function GET(request) {
     console.log("Executing courses query...");
     const result = await conn.query(query);
     console.log("Courses query result:", result);
+    result.records.forEach((record) => {
+      console.log("Location__r.Name:", record.Location__r ? record.Location__r.Name : "No Location_r");
+    });
 
     // Return successful response with courses data
     console.log("Returning successful response with courses data");
