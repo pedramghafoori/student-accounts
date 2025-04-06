@@ -72,7 +72,6 @@ export async function GET() {
           SELECT Id, Name, PersonEmail
           FROM Account
           WHERE PersonEmail = '${userEmail}'
-          LIMIT 1
         `;
         console.log("Executing Salesforce account query:", accountQuery);
         const accountResult = await conn.query(accountQuery);
@@ -80,30 +79,24 @@ export async function GET() {
     
         if (accountResult.totalSize === 0) {
           console.error("No matching Salesforce account found for email:", userEmail);
-          return NextResponse.json(
-            { success: false, message: 'No matching account found' },
-            { status: 404 }
-          );
+          return NextResponse.json({ success: false, message: 'No matching account found' }, { status: 404 });
+        } else if (accountResult.totalSize > 1) {
+          console.log('Multiple matching accounts found. Returning accounts array for selection.');
+          return NextResponse.json({ success: true, accounts: accountResult.records });
+        } else {
+          const account = accountResult.records[0];
+          console.log("Retrieved Salesforce account:", account);
+          // Query Salesforce for Opportunities related to the account
+          const oppQuery = `
+            SELECT Id, Name, StageName, CloseDate, Amount, AccountId
+            FROM Opportunity
+            WHERE AccountId = '${account.Id}'
+          `;
+          console.log("Executing Salesforce opportunities query:", oppQuery);
+          const oppResult = await conn.query(oppQuery);
+          console.log(`Salesforce opportunities query returned ${oppResult.totalSize} record(s):`, oppResult.records);
+          return NextResponse.json({ success: true, account, opportunities: oppResult.records });
         }
-        const account = accountResult.records[0];
-        console.log("Retrieved Salesforce account:", account);
-    
-        // 6) Query Salesforce for Opportunities related to the account
-        const oppQuery = `
-          SELECT Id, Name, StageName, CloseDate, Amount, AccountId
-          FROM Opportunity
-          WHERE AccountId = '${account.Id}'
-        `;
-        console.log("Executing Salesforce opportunities query:", oppQuery);
-        const oppResult = await conn.query(oppQuery);
-        console.log(`Salesforce opportunities query returned ${oppResult.totalSize} record(s):`, oppResult.records);
-  
-        // 7) Return both the account and the related opportunities
-        return NextResponse.json({
-          success: true,
-          account,
-          opportunities: oppResult.records,
-        });
   } catch (error) {
     console.error("Salesforce Error in GET /api/salesforce route:", error);
     return NextResponse.json(

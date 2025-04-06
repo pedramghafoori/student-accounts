@@ -3,32 +3,51 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Layout from "@/components/Layout";
-import CourseList from "@/components/CourseList";
 
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
+  const [opportunities, setOpportunities] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    axios
-      .get("/api/salesforce")
-      .then((res) => {
-        if (res.data.success) {
-          // 'accounts' is now an array
-          setAccounts(res.data.accounts);
-        } else {
-          setError(res.data.message || "Error fetching accounts");
-        }
-      })
-      .catch((err) => setError(err.message));
-  }, []);
+        axios.get("/api/salesforce")
+          .then((res) => {
+            if (res.data.success) {
+              // If the API returns a single account in 'account', wrap it in an array.
+            if (res.data.account) {
+                setAccounts([res.data.account]);
+              } else if (res.data.accounts) {
+                setAccounts(res.data.accounts);
+              } else {
+                setAccounts([]);
+              }
+            } else {
+              setError(res.data.message || "Error fetching accounts");
+            }
+          })
+        .catch((err) => setError(err.message));
+      }, []);
 
   // Called when user selects an account from the dropdown
   const handleSelect = (accountId) => {
-    const account = accounts.find((a) => a.Id === accountId);
-    setSelectedAccount(account);
-  };
+        const account = accounts.find((a) => a.Id === accountId);
+        setSelectedAccount(account);
+      };
+      // Fetch opportunities (registrations) whenever an account is selected
+  useEffect(() => {
+    if (selectedAccount) {      axios.get(`/api/opportunities?accountId=${selectedAccount.Id}`)
+        .then((res) => {
+          if (res.data.success) {
+            setOpportunities(res.data.opportunities);
+          } else {
+           setError(res.data.message || "Error fetching opportunities");
+          }
+        })
+        .catch((err) => setError(err.message));
+    }
+  }, [selectedAccount]);
+
 
   return (
     <Layout>
@@ -107,10 +126,6 @@ export default function DashboardPage() {
             <p className="text-gray-700">Loading or no accounts found...</p>
           )}
 
-          {/* Example course list */}
-          <div className="mt-8">
-            <CourseList />
-          </div>
         </div>
       </div>
     </Layout>
