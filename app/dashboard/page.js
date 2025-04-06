@@ -113,7 +113,7 @@ export default function DashboardPage() {
   }, [selectedAccount]);
 
   return (
-    <Layout>
+  <Layout accounts={accounts}>
       {/* A container to give more breathing room */}
       <div className="container mx-auto py-10 px-6">
         <h1 className="text-3xl font-semibold mb-6">Accounts</h1>
