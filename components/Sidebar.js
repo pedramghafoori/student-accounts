@@ -3,8 +3,8 @@ import React from "react";
 export default function Sidebar({ accounts, onSelectAccount }) {
   return (
     <div className="w-64 bg-white shadow p-4">
-      <h2 className="text-xl font-bold mb-2">Dashboard</h2>
-      <p className="mb-4">Courses</p>
+      <h2 className="text-xl font-bold mb-2">Accounts</h2>
+      <p className="mb-4"></p>
 
       {accounts.length === 0 && (
         <p className="text-gray-700">No accounts found...</p>

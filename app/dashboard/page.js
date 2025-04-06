@@ -81,8 +81,7 @@ export default function DashboardPage() {
       .catch((err) => setError(err.message));
   }, []);
 
-  // 2) Handle Account Selection (now managed via Sidebar)
-  // (Sidebar will call handleSelect)
+  // 2) Handle Account Selection (Sidebar will call handleSelect)
   const handleSelect = (accountId) => {
     const account = accounts.find((a) => a.Id === accountId);
     setSelectedAccount(account);
@@ -118,7 +117,6 @@ export default function DashboardPage() {
     <Layout accounts={accounts} onSelectAccount={handleSelect}>
       <div className="container mx-auto py-10 px-6">
         <h1 className="text-3xl font-semibold mb-6">Accounts</h1>
-
         {error && <p className="text-red-600 mb-4">{error}</p>}
 
         {/* Main content area for selected account’s courses */}
@@ -138,7 +136,6 @@ export default function DashboardPage() {
                       const { courseDates, course, location } =
                         parseCourseName(enr.CourseName);
                       const hasPassed = enr.DaysUntilStart < 0;
-
                       return (
                         <div
                           key={enr.Id}
@@ -164,6 +161,33 @@ export default function DashboardPage() {
                                 <strong>Days Until: {enr.DaysUntilStart}</strong>
                               )}
                             </div>
+                          </div>
+                          <div className="card-footer mt-4 flex flex-col items-end">
+                            {enr.DaysUntilStart > 2 ? (
+                              <>
+                                <a
+                                  href="#"
+                                  className="text-blue-500 underline mb-2"
+                                >
+                                  Reschedule
+                                </a>
+                                <a
+                                  href="#"
+                                  className="text-blue-500 underline"
+                                >
+                                  Refund
+                                </a>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-blue-300 underline mb-2">
+                                  Reschedule
+                                </span>
+                                <span className="text-blue-300 underline">
+                                  Refund
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
