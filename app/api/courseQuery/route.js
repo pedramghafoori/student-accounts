@@ -1,15 +1,11 @@
-import { getSystemTokensFromRedis, getOAuth2 } from '@/lib/salesforce';
 import { NextResponse } from 'next/server';
 import jsforce from 'jsforce';
+import { getSystemTokensFromRedis, getOAuth2 } from '@/lib/salesforce';
 
-// This route queries Batch__c records for a specific Account
-// Usage: GET /api/courseQuery?accountId=someId
 export async function GET(request) {
   try {
-    // 1) Parse the accountId from the query string
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get('accountId');
-    console.log('[courseQuery] Received accountId:', accountId);
     if (!accountId) {
       return NextResponse.json(
         { success: false, message: 'No accountId provided' },
@@ -17,9 +13,8 @@ export async function GET(request) {
       );
     }
 
-    // 2) Retrieve Salesforce tokens from Redis (or another store)
+    // Retrieve tokens
     const { accessToken, refreshToken, instanceUrl } = await getSystemTokensFromRedis();
-    console.log('[courseQuery] Tokens from Redis:', { accessToken, refreshToken, instanceUrl });
     if (!accessToken || !refreshToken || !instanceUrl) {
       return NextResponse.json(
         { success: false, message: 'Missing Salesforce tokens' },
@@ -27,7 +22,7 @@ export async function GET(request) {
       );
     }
 
-    // 3) Create the jsforce connection
+    // Create JSforce connection
     const conn = new jsforce.Connection({
       oauth2: getOAuth2(),
       accessToken,
@@ -35,22 +30,62 @@ export async function GET(request) {
       instanceUrl,
     });
 
-    // 4) Run the SOQL query for related Batch__c records
+    // The SOQL query
     const soql = `
-      SELECT Id, Name, Product__c, Days_until_Start_Date__c, Start_Date_Time__c
-      FROM Batch__c
-      WHERE Id IN (
-        SELECT Batch__c
-        FROM Batch_Enrolment__c
-        WHERE Account__c = '${accountId}'
-      )
+      SELECT
+        Id,
+        Name,
+        (
+          SELECT
+            Id,
+            Name,
+            Batch__r.Name,
+            Batch__r.Days_until_Start_Date__c,
+            Batch__r.Start_date_time__c,
+            Batch__r.Product__r.Name
+          FROM Course_Enrolments__r
+        )
+      FROM Account
+      WHERE Id = '${accountId}'
     `;
     console.log('[courseQuery] Running SOQL:', soql);
+
     const result = await conn.query(soql);
     console.log('[courseQuery] Query Result Records:', result.records);
 
-    // 5) Return the records
-    return NextResponse.json({ success: true, records: result.records });
+    // Log the subrecords if they exist
+    if (result.records.length > 0 && result.records[0].Course_Enrolments__r) {
+      console.log(
+        'Subrecords:',
+        result.records[0].Course_Enrolments__r.records
+      );
+    }
+
+    // Transform the data, flattening the nested fields
+    const transformedRecords = result.records.map((acc) => {
+      let enrolments = [];
+      if (acc.Course_Enrolments__r && acc.Course_Enrolments__r.records) {
+        enrolments = acc.Course_Enrolments__r.records.map((en) => ({
+          Id: en.Id,
+          EnrolmentName: en.Name,
+          CourseName: en.Batch__r?.Name,
+          ProductName: en.Batch__r?.Product__r?.Name,
+          DaysUntilStart: en.Batch__r?.Days_until_Start_Date__c,
+          StartDateTime: en.Batch__r?.Start_date_time__c,
+        }));
+      }
+
+      return {
+        AccountId: acc.Id,
+        AccountName: acc.Name,
+        Enrolments: enrolments,
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      records: transformedRecords,
+    });
   } catch (error) {
     console.error('Error in courseQuery route:', error);
     return NextResponse.json(
