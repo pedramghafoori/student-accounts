@@ -237,21 +237,19 @@ export default function DashboardPage() {
                           <div className="card-footer mt-4 flex flex-col items-end">
                             {enr.DaysUntilStart > threshold ? (
                               <>
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
+                                <a href="#" onClick={(e) => {
                                     e.preventDefault();
-                                    // Navigate to /reschedule with the course name or ID
-                                    router.push(`/reschedule?oldCourseName=${encodeURIComponent(course)}&oldCourseId=${enr.Id}`);
+                                    // Use the parsed course name instead of trying to get Product__r.Name.
+                                    const parsed = parseCourseName(enr.CourseName);
+                                    const courseName = parsed.course || enr.CourseName || "Unknown course";
+                                    router.push(
+                                      `/reschedule?oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.Id}`
+                                    );
                                   }}
-                                  className="text-blue-500 underline mb-2"
-                                >
+                                  className="text-blue-500 underline mb-2">
                                   Reschedule (
                                   {policy?.reschedulePolicy &&
-                                    getPolicyForCourse(
-                                      enr.DaysUntilStart,
-                                      policy
-                                    ).reschedule}
+                                    getPolicyForCourse(enr.DaysUntilStart, policy).reschedule}
                                   )
                                 </a>
                                 <a

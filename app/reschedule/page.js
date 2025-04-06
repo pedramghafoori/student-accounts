@@ -14,36 +14,43 @@ export default function ReschedulePage() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const oldCourseId = searchParams.get("oldCourseId");
-  // Now using courseType query parameter instead of courseName
-  const courseType = searchParams.get("courseType");
   
+  // We use 'oldCourseName' here to match the URL parameter
+  const oldCourseName = searchParams.get("oldCourseName") || "";
+  const oldCourseId = searchParams.get("oldCourseId"); // if needed for display
+
+  // 1) fetch future courses
   useEffect(() => {
-    if (!courseType) {
+    if (!oldCourseName) {
       setError("Course type not provided in URL.");
       return;
     }
+
     async function fetchFutureCourses() {
       try {
         setLoading(true);
         setError("");
-        console.log("Fetching future courses for courseType:", courseType);
-        const res = await axios.get(`/api/futureCourses?courseType=${encodeURIComponent(courseType)}`);
-        console.log("API response:", res.data);
+        console.log("Fetching future courses for:", oldCourseName);
+        const res = await axios.get(
+          `/api/futureCourses?courseType=${encodeURIComponent(oldCourseName)}`
+        );
+        console.log("Response data:", res.data);
+
         if (res.data.success) {
           setFutureCourses(res.data.courses);
         } else {
           setError(res.data.message || "Error fetching future courses");
         }
       } catch (err) {
-        console.error("Error fetching future courses:", err);
+        console.error(err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     }
+
     fetchFutureCourses();
-  }, [courseType]);
+  }, [oldCourseName]);
 
   // 2) handle selecting a future course
   const handleSelectCourse = (course) => {
@@ -61,9 +68,10 @@ export default function ReschedulePage() {
 
   // 4) confirm
   const handleConfirm = () => {
-    console.log("Rescheduling from course ID:", oldCourseId, "to new course:", selectedNewCourse);
-    // Example: finalize the reschedule, then navigate away
-    router.push("/dashboard");
+    console.log("Rescheduling from:", oldCourseName, "to:", selectedNewCourse);
+    // e.g. call an endpoint: /api/reschedule
+    // then navigate away or show success
+    router.push("/dashboard"); // placeholder
   };
 
   return (
@@ -71,7 +79,7 @@ export default function ReschedulePage() {
       {step === 1 && (
         <>
           <h1 className="text-2xl font-bold mb-4">
-            Reschedule Your Course: {courseType}
+            Reschedule Your Course: {oldCourseName || "Unknown"}
           </h1>
           <p className="text-gray-700 mb-4">
             Please select one of the future courses to reschedule into:
@@ -115,7 +123,7 @@ export default function ReschedulePage() {
           <h1 className="text-2xl font-bold mb-4">Confirm Reschedule</h1>
           <div className="mb-4">
             <p className="mb-2">
-              <strong>Old Course ID:</strong> {oldCourseId}
+              <strong>Old Course:</strong> {oldCourseName} (ID: {oldCourseId})
             </p>
             <p className="mb-2">
               <strong>New Course:</strong> {selectedNewCourse?.Name}
