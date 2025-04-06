@@ -1,12 +1,9 @@
-// components/Layout.js
-"use client";
-
 import Sidebar from "./Sidebar";
 
-export default function Layout({ children }) {
+export default function Layout({ children, accounts = [] }) {
   return (
     <div className="flex">
-      <Sidebar />
+      <Sidebar accounts={accounts || []} />
       <main className="flex-1 bg-gray-50 p-8">{children}</main>
     </div>
   );

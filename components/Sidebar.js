@@ -1,22 +1,23 @@
-// components/Sidebar.js
-export default function Sidebar() {
-    return (
-      <div className="w-64 bg-white border-r border-gray-200 min-h-screen p-4">
-        <nav className="space-y-2">
-          <a
-            href="/dashboard"
-            className="block rounded px-3 py-2 hover:bg-gray-100 transition"
-          >
-            Dashboard
-          </a>
-          <a
-            href="/courses"
-            className="block rounded px-3 py-2 hover:bg-gray-100 transition"
-          >
-            Courses
-          </a>
-          {/* Add more nav links */}
-        </nav>
-      </div>
-    );
-  }
+import React from "react";
+
+export default function Sidebar({ accounts }) {
+  return (
+    <div className="w-64 bg-white shadow p-4">
+      <h2 className="text-xl font-bold mb-2">Dashboard</h2>
+      <p className="mb-4">Courses</p>
+
+      {accounts.length === 0 && (
+        <p className="text-gray-700">No accounts found...</p>
+      )}
+
+      {accounts.map((acc) => (
+        <div
+          key={acc.Id}
+          className="border border-gray-300 rounded-lg p-4 mb-4 hover:bg-blue-50 cursor-pointer"
+        >
+          <h2 className="text-lg font-medium">{acc.Name}</h2>
+        </div>
+      ))}
+    </div>
+  );
+}
