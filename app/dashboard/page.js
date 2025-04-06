@@ -7,125 +7,121 @@ import Layout from "@/components/Layout";
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  const [opportunities, setOpportunities] = useState([]);
+  const [batches, setBatches] = useState([]);
   const [error, setError] = useState("");
 
+  // 1) Fetch the list of Accounts (to display as cards on the right)
   useEffect(() => {
-        axios.get("/api/salesforce")
-          .then((res) => {
-            if (res.data.success) {
-              // If the API returns a single account in 'account', wrap it in an array.
-            if (res.data.account) {
-                setAccounts([res.data.account]);
-              } else if (res.data.accounts) {
-                setAccounts(res.data.accounts);
-              } else {
-                setAccounts([]);
-              }
-            } else {
-              setError(res.data.message || "Error fetching accounts");
-            }
-          })
-        .catch((err) => setError(err.message));
-      }, []);
-
-  // Called when user selects an account from the dropdown
-  const handleSelect = (accountId) => {
-        const account = accounts.find((a) => a.Id === accountId);
-        setSelectedAccount(account);
-      };
-      // Fetch opportunities (registrations) whenever an account is selected
-  useEffect(() => {
-    if (selectedAccount) {      axios.get(`/api/opportunities?accountId=${selectedAccount.Id}`)
-        .then((res) => {
-          if (res.data.success) {
-            setOpportunities(res.data.opportunities);
+    axios
+      .get("/api/salesforce")
+      .then((res) => {
+        if (res.data.success) {
+          // If the API returns a single account in 'account', wrap it in an array
+          if (res.data.account) {
+            setAccounts([res.data.account]);
+          } else if (res.data.accounts) {
+            setAccounts(res.data.accounts);
           } else {
-           setError(res.data.message || "Error fetching opportunities");
+            setAccounts([]);
           }
-        })
-        .catch((err) => setError(err.message));
-    }
-  }, [selectedAccount]);
+        } else {
+          setError(res.data.message || "Error fetching accounts");
+        }
+      })
+      .catch((err) => setError(err.message));
+  }, []);
 
+  // 2) When user selects an account, set that account
+  const handleSelect = (accountId) => {
+    const account = accounts.find((a) => a.Id === accountId);
+    setSelectedAccount(account);
+  };
+
+  // 3) Fetch the related Batch__c records whenever an account is selected
+  useEffect(() => {
+    if (!selectedAccount) {
+      return;
+    }
+
+    // Call your new courseQuery endpoint
+    axios
+      .get(`/api/courseQuery?accountId=${selectedAccount.Id}`)
+      .then((res) => {
+        if (res.data.success) {
+          setBatches(res.data.records || []);
+        } else {
+          setError(res.data.message || "Error fetching batch info");
+          setBatches([]);
+        }
+      })
+      .catch((err) => {
+        setError(err.message);
+        setBatches([]);
+      });
+  }, [selectedAccount]);
 
   return (
     <Layout>
       <div className="bg-gray-50 min-h-screen p-8">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-semibold mb-6">Account</h1>
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-semibold mb-6">Accounts</h1>
 
           {/* Display error message if any */}
           {error && <p className="text-red-600 mb-4">{error}</p>}
 
-          {/* If we have multiple accounts, show a dropdown */}
-          {accounts.length > 1 && (
-            <div className="mb-4">
-              <label className="block mb-2 font-medium">
-                Select an Account:
-              </label>
-              <select
-                className="border border-gray-300 rounded px-3 py-2"
-                onChange={(e) => handleSelect(e.target.value)}
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  -- Choose an account --
-                </option>
-                {accounts.map((acc) => (
-                  <option key={acc.Id} value={acc.Id}>
-                    {acc.Name} ({acc.Id})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="flex space-x-4">
+            {/* LEFT COLUMN: Selected account details + batches */}
+            <div className="w-2/3">
+              {selectedAccount ? (
+                <div className="bg-white rounded-lg shadow p-6 space-y-4">
+                  {/* Show the selected Account Name */}
+                  <h2 className="text-xl font-bold">{selectedAccount.Name}</h2>
 
-          {/* If exactly 1 account is found, auto-select it */}
-          {accounts.length === 1 && !selectedAccount && (
-            <div className="mb-4">
-              <p className="text-gray-700">
-                Only one matching account found, selected automatically.
-              </p>
-              <button
-                className="bg-blue-600 text-white rounded px-4 py-2 mt-2"
-                onClick={() => setSelectedAccount(accounts[0])}
-              >
-                View Account
-              </button>
-            </div>
-          )}
-
-          {/* Show selected account info */}
-          {selectedAccount && (
-            <div className="bg-white rounded-lg shadow p-6 space-y-4 mt-4">
-              <p>
-                <strong>Account ID:</strong> {selectedAccount.Id}
-              </p>
-              <p>
-                <strong>Name:</strong> {selectedAccount.Name}
-              </p>
-              {/* PersonEmail for Person Account */}
-              {selectedAccount.PersonEmail && (
-                <p>
-                  <strong>Email:</strong> {selectedAccount.PersonEmail}
-                </p>
+                  {/* Display the Batch__c records if any */}
+                  {batches.length > 0 ? (
+                    <div>
+                      <h3 className="font-semibold mt-4">Related Course Batches</h3>
+                      <ul className="list-disc ml-6">
+                        {batches.map((batch) => (
+                          <li key={batch.Id} className="mb-2">
+                            <p className="font-medium">{batch.Name}</p>
+                            <p>Product: {batch.Product__c}</p>
+                            <p>Days until Start: {batch.Days_until_Start_Date__c}</p>
+                            <p>Start Date/Time: {batch.Start_Date_Time__c}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="text-gray-700">No course batches found for this account.</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-700">Please select an account to view details.</p>
               )}
             </div>
-          )}
 
-          {/* If no account is selected yet but we have some accounts, prompt user */}
-          {!selectedAccount && accounts.length > 1 && (
-            <p className="text-gray-700 mt-2">
-              Please select an account from the dropdown.
-            </p>
-          )}
+            {/* RIGHT COLUMN: Account cards */}
+            <div className="w-1/3">
+              {/* If no accounts and no error, show loading */}
+              {accounts.length === 0 && !error && (
+                <p className="text-gray-700">Loading or no accounts found...</p>
+              )}
 
-          {/* If no accounts and not error, show loading or 'none found' */}
-          {accounts.length === 0 && !error && (
-            <p className="text-gray-700">Loading or no accounts found...</p>
-          )}
-
+              {accounts.map((acc) => (
+                <div
+                  key={acc.Id}
+                  className={`mb-4 bg-white rounded-lg shadow p-4 cursor-pointer hover:bg-blue-50 transition-colors ${
+                    selectedAccount?.Id === acc.Id ? "border-2 border-blue-500" : ""
+                  }`}
+                  onClick={() => handleSelect(acc.Id)}
+                >
+                  {/* Show only the Name on the card */}
+                  <h2 className="text-lg font-medium">{acc.Name}</h2>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </Layout>
