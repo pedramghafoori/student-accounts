@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [status, setStatus] = useState("");
 
+  // Existing OTP logic
   const handleSendOtp = async () => {
     try {
       setStatus("Sending OTP...");
@@ -33,6 +34,17 @@ export default function LoginPage() {
     }
   };
 
+  // NEW: Magic Link logic
+  const handleSendMagicLink = async () => {
+    try {
+      setStatus("Sending magic link...");
+      await axios.post("/api/auth", { action: "send-magic-link", email });
+      setStatus("Magic link sent! Check your email.");
+    } catch (err) {
+      setStatus("Error sending magic link: " + err.message);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white p-8 shadow-md rounded-lg">
@@ -51,6 +63,16 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
+
+            {/* NEW: Magic Link Button */}
+            <button
+              onClick={handleSendMagicLink}
+              className="w-full py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+            >
+              Send Magic Link
+            </button>
+
+            {/* Existing OTP Button */}
             <button
               onClick={handleSendOtp}
               className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
@@ -77,7 +99,7 @@ export default function LoginPage() {
               onClick={handleVerifyOtp}
               className="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
             >
-              Verify & Login
+              Verify &amp; Login
             </button>
           </div>
         )}

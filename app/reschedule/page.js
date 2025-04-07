@@ -107,9 +107,22 @@ export default function ReschedulePage() {
   };
 
   // 4) Confirm reschedule
-  const handleConfirm = () => {
-    console.log("Rescheduling from:", oldCourseName, "to:", selectedNewCourse);
-    router.push("/dashboard"); // placeholder navigation
+  const handleConfirm = async () => {
+    // Prepare the payload
+    const payload = {
+      oldCourseId,
+      varNewCourseId: selectedNewCourse?.Id,
+    };
+
+    try {
+      console.log("Sending reschedule request:", payload);
+      await axios.post("/api/reschedule", payload);
+      // If successful, navigate away or show success message
+      router.push("/dashboard");
+    } catch (err) {
+      console.error("Error rescheduling:", err);
+      setError(err?.response?.data?.message || "Error rescheduling course.");
+    }
   };
 
   // 5) Handle "Nevermind, keep my current course"

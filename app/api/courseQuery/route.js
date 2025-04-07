@@ -39,6 +39,8 @@ export async function GET(request) {
           SELECT
             Id,
             Name,
+            Batch__c,
+            Batch__r.Id,
             Batch__r.Name,
             Batch__r.Days_until_Start_Date__c,
             Batch__r.Start_date_time__c,
@@ -68,6 +70,8 @@ export async function GET(request) {
         enrolments = acc.Course_Enrolments__r.records.map((en) => ({
           Id: en.Id,
           EnrolmentName: en.Name,
+          BatchId: en.Batch__r?.Id,
+          BatchLookup: en.Batch__c,
           CourseName: en.Batch__r?.Name,
           ProductName: en.Batch__r?.Product__r?.Name,
           DaysUntilStart: en.Batch__r?.Days_until_Start_Date__c,
