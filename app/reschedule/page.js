@@ -125,11 +125,10 @@ export default function ReschedulePage() {
   const handleConfirm = async () => {
     // Prepare the payload
     const payload = {
-      oldCourseId,
-      varNewCourseId: selectedNewCourse?.Id,
-      varSelectedEnrollments: parsedEnrollmentIds,
-      // If you want singleEnrollmentId as well
-      singleEnrollmentId: enrollmentId,
+    recordId: enrollmentId,
+    varNewCourseId: selectedNewCourse?.Id,
+    varSelectedEnrollments: parsedEnrollmentIds,
+    singleEnrollmentId: enrollmentId,
     };
 
     console.log("[ReschedulePage] handleConfirm payload:", payload);

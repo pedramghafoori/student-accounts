@@ -13,6 +13,8 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [selectedEnrollments, setSelectedEnrollments] = useState([]);
 
+  const router = useRouter();
+
   function handleToggleEnrollment(id) {
     console.log("Toggling enrollment", id);
     setSelectedEnrollments((prev) => {
@@ -24,8 +26,6 @@ export default function DashboardPage() {
       }
     });
   }
-
-  const router = useRouter();
 
   function parseCourseName(fullName = "") {
     let splitted = fullName.split(" - ");
@@ -132,6 +132,7 @@ export default function DashboardPage() {
     };
 
     fetchPolicy();
+    // Refresh the policy every 5 minutes
     const intervalId = setInterval(fetchPolicy, 300000);
     return () => clearInterval(intervalId);
   }, []);
@@ -186,99 +187,138 @@ export default function DashboardPage() {
                     {batches.map((enr) => {
                       console.log("Debug each enrollment:", enr);
 
+                      const { courseDates, location } = parseCourseName(
+                        enr.CourseName
+                      );
+                      const policyData =
+                        policy &&
+                        getPolicyForCourse(enr.DaysUntilStart, policy);
+
                       return (
-                        <div key={enr.Id} className="card mb-4 p-4 border border-gray-300 rounded-md">
+                        <div
+                          key={enr.Id}
+                          className="card mb-4 p-4 border border-gray-300 rounded-md"
+                        >
                           <div className="card-header">
-                            <a href="#" className="card-title">
+                            <a href="#" className="card-title font-medium">
                               {enr.CourseName || "Untitled Course"}
                             </a>
                           </div>
                           <div className="card-body">
-                            <div className="card-detail">
-                              <span className="icon">📅</span> {enr.CourseDates}
+                            {/* Put date, location, Days Until,
+                                and the Reschedule/Refund links in one row */}
+                            <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
+                              {/* Left side: Date/Location/Days */}
+                              <div className="flex items-center gap-4">
+                                {/* Course Dates */}
+                                <div className="flex items-center">
+                                  <span className="mr-1">📅</span>
+                                  {courseDates || enr.CourseDates}
+                                </div>
+                                {/* Location */}
+                                <div className="flex items-center">
+                                  <span className="mr-1">📍</span>
+                                  {location || enr.Location}
+                                </div>
+                                {/* Days Until */}
+                                <div className="flex items-center">
+                                  <span className="mr-1">⏰</span>
+                                  {enr.DaysUntilStart < 0 ? (
+                                    "Course has passed"
+                                  ) : (
+                                    <strong>
+                                      Days Until: {enr.DaysUntilStart}
+                                    </strong>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Right side: Reschedule/Refund links (smaller font) */}
+                              <div className="flex items-center gap-4 text-xs">
+                                {enr.DaysUntilStart >
+                                (policy && policy.daysBeforeReschedule) ? (
+                                  <>
+                                    <a
+                                      href="#"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        console.log(
+                                          "Manually building a new enrollments array for:",
+                                          enr.Id
+                                        );
+
+                                        let newEnrollments = [
+                                          ...selectedEnrollments,
+                                        ];
+                                        const existingIndex =
+                                          newEnrollments.findIndex(
+                                            (obj) => obj.Id === enr.Id
+                                          );
+                                        if (existingIndex !== -1) {
+                                          newEnrollments =
+                                            newEnrollments.filter(
+                                              (obj) => obj.Id !== enr.Id
+                                            );
+                                        } else {
+                                          newEnrollments.push({ Id: enr.Id });
+                                        }
+
+                                        setSelectedEnrollments(newEnrollments);
+
+                                        const parsed = parseCourseName(
+                                          enr.CourseName
+                                        );
+                                        const courseName =
+                                          parsed.course ||
+                                          enr.CourseName ||
+                                          "Unknown course";
+                                        console.log(
+                                          "Navigating to reschedule with updated enrollments:",
+                                          {
+                                            oldCourseName: courseName,
+                                            oldCourseId: enr.BatchId,
+                                            newEnrollments,
+                                          }
+                                        );
+
+                                        router.push(
+                                          `/reschedule?oldCourseName=${encodeURIComponent(
+                                            courseName
+                                          )}&oldCourseId=${
+                                            enr.BatchId
+                                          }&enrollmentId=${
+                                            enr.Id
+                                          }&enrollmentIds=${JSON.stringify(
+                                            newEnrollments
+                                          )}`
+                                        );
+                                      }}
+                                      className="text-blue-500 underline"
+                                    >
+                                      Reschedule (
+                                      {policyData?.reschedule}
+                                      )
+                                    </a>
+                                    <a
+                                      href="#"
+                                      className="text-blue-500 underline"
+                                    >
+                                      Refund (
+                                      {policyData?.refund})
+                                    </a>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="text-blue-300 underline">
+                                      Reschedule ({policyData?.reschedule})
+                                    </span>
+                                    <span className="text-blue-300 underline">
+                                      Refund ({policyData?.refund})
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <div className="card-detail">
-                              <span className="icon">📍</span> {enr.Location}
-                            </div>
-                            <div className="card-detail">
-                              <span className="icon">⏰</span>{" "}
-                              {enr.DaysUntilStart < 0 ? (
-                                "Course has passed"
-                              ) : (
-                                <strong>Days Until: {enr.DaysUntilStart}</strong>
-                              )}
-                            </div>
-                          </div>
-                          <div className="card-footer mt-4 flex flex-col items-end">
-                            {enr.DaysUntilStart > (policy && policy.daysBeforeReschedule) ? (
-                              <>
-                                <a href="#" onClick={(e) => {
-                                  e.preventDefault();
-                                  console.log("Manually building a new enrollments array for:", enr.Id);
-
-                                  let newEnrollments = [...selectedEnrollments];
-                                  const existingIndex = newEnrollments.findIndex((obj) => obj.Id === enr.Id);
-                                  if (existingIndex !== -1) {
-                                    newEnrollments = newEnrollments.filter((obj) => obj.Id !== enr.Id);
-                                  } else {
-                                    newEnrollments.push({ Id: enr.Id });
-                                  }
-
-                                  setSelectedEnrollments(newEnrollments);
-
-                                  const parsed = parseCourseName(enr.CourseName);
-                                  const courseName = parsed.course || enr.CourseName || "Unknown course";
-                                  console.log("Navigating to reschedule with updated enrollments:", {
-                                    oldCourseName: courseName,
-                                    oldCourseId: enr.BatchId,
-                                    newEnrollments,
-                                  });
-
-                                  router.push(
-                                    `/reschedule?oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.BatchId}&enrollmentId=${enr.Id}&enrollmentIds=${JSON.stringify(newEnrollments)}`
-                                  );
-                                }}
-                                className="text-blue-500 underline mb-2">
-                                  Reschedule (
-                                  {policy?.reschedulePolicy &&
-                                    getPolicyForCourse(enr.DaysUntilStart, policy).reschedule}
-                                  )
-                                </a>
-                                <a
-                                  href="#"
-                                  className="text-blue-500 underline"
-                                >
-                                  Refund (
-                                  {policy?.refundPolicy &&
-                                    getPolicyForCourse(
-                                      enr.DaysUntilStart,
-                                      policy
-                                    ).refund}
-                                  )
-                                </a>
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-blue-300 underline mb-2">
-                                  Reschedule (
-                                  {policy?.reschedulePolicy &&
-                                    getPolicyForCourse(
-                                      enr.DaysUntilStart,
-                                      policy
-                                    ).reschedule}
-                                  )
-                                </span>
-                                <span className="text-blue-300 underline">
-                                  Refund (
-                                  {policy?.refundPolicy &&
-                                    getPolicyForCourse(
-                                      enr.DaysUntilStart,
-                                      policy
-                                    ).refund}
-                                  )
-                                </span>
-                              </>
-                            )}
                           </div>
                         </div>
                       );
