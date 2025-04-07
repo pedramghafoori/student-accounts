@@ -27,6 +27,19 @@ export default function DashboardPage() {
     });
   }
 
+  function formatDays(days) {
+    const weeks = Math.floor(days / 7);
+    const remainder = days % 7;
+
+    if (weeks > 0 && remainder > 0) {
+      return `Starts in ${weeks} weeks, ${remainder} days`;
+    } else if (weeks > 0) {
+      return `Starts in ${weeks} weeks`;
+    } else {
+      return `Starts in ${days} days`;
+    }
+  }
+
   /**
    * Example input: "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
    * Returns:
@@ -188,7 +201,7 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-semibold mb-6">{selectedAccount.Name}</h1>
         {error && <p className="text-red-600 mb-4">{error}</p>}
         <div className="flex">
-          <div className="flex-1 ml-6 bg-white shadow p-6 rounded-lg">
+          <div className="flex-1 bg-white shadow p-6 rounded-lg">
             {selectedAccount ? (
               <div>
                 
@@ -212,11 +225,11 @@ export default function DashboardPage() {
                         >
                           <div className="card-header">
                             {/* Course Title in bold + #0070d9 */}
-                            <span className="text-[#0070d9] font-bold">
+                          <span className="text-[#0070d9] font-bold text-lg">
                               {course || "Untitled Course"}
                             </span>
                           </div>
-                          <div className="card-body">
+                          <div className="card-body mt-3">
                             {/* Single row for date, location, days, and links */}
                             <div className="flex items-center justify-between flex-wrap gap-6 mt-2">
                               {/* Left side: Date/Location/Days */}
@@ -237,9 +250,7 @@ export default function DashboardPage() {
                                   {enr.DaysUntilStart < 0 ? (
                                     "Course has passed"
                                   ) : (
-                                    <span>
-                                      Days Until: {enr.DaysUntilStart}
-                                    </span>
+                                    <span>{formatDays(enr.DaysUntilStart)}</span>
                                   )}
                                 </div>
                               </div>
