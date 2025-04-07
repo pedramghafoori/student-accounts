@@ -1,12 +1,10 @@
-// app/api/auth/route.js
-
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { sign } from 'jsonwebtoken';
-import { randomBytes } from 'crypto';    // For magic link token generation
+import { randomBytes } from 'crypto';
 import jsforce from 'jsforce';
 
-import { prisma } from '@/lib/prisma';   // Prisma client
+import { prisma } from '@/lib/prisma';
 import redisClient from '@/lib/redisClient';
 import { getOAuth2 } from '@/lib/salesforce';
 
@@ -21,6 +19,29 @@ export async function getSystemTokensFromRedis() {
 
 export async function POST(request) {
   try {
+    // Ensure essential environment variables
+    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Missing email environment vars (EMAIL_HOST, EMAIL_USER, EMAIL_PASS)',
+        },
+        { status: 500 }
+      );
+    }
+    if (!process.env.JWT_SECRET) {
+      return NextResponse.json(
+        { success: false, message: 'Missing JWT_SECRET env var' },
+        { status: 500 }
+      );
+    }
+    if (!process.env.APP_URL) {
+      return NextResponse.json(
+        { success: false, message: 'Missing APP_URL env var' },
+        { status: 500 }
+      );
+    }
+
     const { action, email, otp } = await request.json();
 
     if (!action) {
@@ -42,7 +63,20 @@ export async function POST(request) {
       }
 
       // 1A) Get system tokens from Redis
-      const { accessToken, refreshToken, instanceUrl } = await getSystemTokensFromRedis();
+      let accessToken, refreshToken, instanceUrl;
+      try {
+        const tokens = await getSystemTokensFromRedis();
+        accessToken = tokens.accessToken;
+        refreshToken = tokens.refreshToken;
+        instanceUrl = tokens.instanceUrl;
+      } catch (rErr) {
+        console.error('Error reading Redis for system tokens:', rErr);
+        return NextResponse.json(
+          { success: false, message: 'Error reading system tokens' },
+          { status: 500 }
+        );
+      }
+
       if (!accessToken || !refreshToken || !instanceUrl) {
         return NextResponse.json(
           { success: false, message: 'System user tokens are not set yet' },
@@ -51,12 +85,21 @@ export async function POST(request) {
       }
 
       // 1B) Connect to Salesforce w/ existing OAuth tokens
-      const conn = new jsforce.Connection({
-        oauth2: getOAuth2(),
-        accessToken,
-        refreshToken,
-        instanceUrl,
-      });
+      let conn;
+      try {
+        conn = new jsforce.Connection({
+          oauth2: getOAuth2(),
+          accessToken,
+          refreshToken,
+          instanceUrl,
+        });
+      } catch (sfConnErr) {
+        console.error('SF Connection init error:', sfConnErr);
+        return NextResponse.json(
+          { success: false, message: 'Salesforce connection init error' },
+          { status: 500 }
+        );
+      }
 
       // 1C) Check if PersonEmail exists
       const querySF = `
@@ -65,11 +108,23 @@ export async function POST(request) {
         WHERE PersonEmail = '${email}'
         LIMIT 1
       `;
-      const result = await conn.query(querySF);
+      let result;
+      try {
+        result = await conn.query(querySF);
+      } catch (sfQueryErr) {
+        console.error('Salesforce query error:', sfQueryErr);
+        return NextResponse.json(
+          { success: false, message: 'Error querying Salesforce' },
+          { status: 500 }
+        );
+      }
 
       if (result.totalSize === 0) {
         return NextResponse.json(
-          { success: false, message: `No Salesforce account found for email: ${email}` },
+          {
+            success: false,
+            message: `No Salesforce account found for email: ${email}`,
+          },
           { status: 404 }
         );
       }
@@ -78,32 +133,57 @@ export async function POST(request) {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const expiryTimestamp = new Date(Date.now() + 5 * 60_000); // 5 minutes
 
-      await prisma.otpRecord.create({
-        data: {
-          email,
-          otp: code,
-          expiry: expiryTimestamp,
-          used: false,
-        },
-      });
+      try {
+        await prisma.otpRecord.create({
+          data: {
+            email,
+            otp: code,
+            expiry: expiryTimestamp,
+            used: false,
+          },
+        });
+      } catch (dbErr) {
+        console.error('DB error creating OTP record:', dbErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to create OTP record' },
+          { status: 500 }
+        );
+      }
 
       // 1E) Send OTP via email
-      const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: Number(process.env.EMAIL_PORT),
-        secure: false,
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
+      let transporter;
+      try {
+        transporter = nodemailer.createTransport({
+          host: process.env.EMAIL_HOST,
+          port: Number(process.env.EMAIL_PORT),
+          secure: false,
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+      } catch (mailErr) {
+        console.error('Nodemailer transporter init error:', mailErr);
+        return NextResponse.json(
+          { success: false, message: 'Email transporter init error' },
+          { status: 500 }
+        );
+      }
 
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Your OTP Code',
-        text: `Your login code is ${code}. It expires in 5 minutes.`,
-      });
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: 'Your OTP Code',
+          text: `Your login code is ${code}. It expires in 5 minutes.`,
+        });
+      } catch (sendMailErr) {
+        console.error('Error sending OTP email:', sendMailErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to send OTP email' },
+          { status: 500 }
+        );
+      }
 
       return NextResponse.json({ success: true, message: 'OTP sent' });
     }
@@ -120,9 +200,19 @@ export async function POST(request) {
       }
 
       // 2A) Find OTP record in Postgres
-      const record = await prisma.otpRecord.findFirst({
-        where: { email, otp, used: false },
-      });
+      let record;
+      try {
+        record = await prisma.otpRecord.findFirst({
+          where: { email, otp, used: false },
+        });
+      } catch (dbErr) {
+        console.error('DB error finding OTP record:', dbErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to query OTP record' },
+          { status: 500 }
+        );
+      }
+
       if (!record) {
         return NextResponse.json(
           { success: false, message: 'No OTP found for this email' },
@@ -132,11 +222,14 @@ export async function POST(request) {
 
       // 2B) Check expiry
       if (new Date() > record.expiry) {
-        // Mark as used if expired
-        await prisma.otpRecord.update({
-          where: { id: record.id },
-          data: { used: true },
-        });
+        try {
+          await prisma.otpRecord.update({
+            where: { id: record.id },
+            data: { used: true },
+          });
+        } catch (dbErr) {
+          console.error('DB error marking expired OTP as used:', dbErr);
+        }
         return NextResponse.json(
           { success: false, message: 'OTP expired' },
           { status: 401 }
@@ -144,17 +237,32 @@ export async function POST(request) {
       }
 
       // 2C) Mark OTP as used if valid
-      await prisma.otpRecord.update({
-        where: { id: record.id },
-        data: { used: true },
-      });
+      try {
+        await prisma.otpRecord.update({
+          where: { id: record.id },
+          data: { used: true },
+        });
+      } catch (dbErr) {
+        console.error('DB error marking OTP as used:', dbErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to mark OTP as used' },
+          { status: 500 }
+        );
+      }
 
       // 2D) Create JWT & set cookie
-      const token = sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-      const response = NextResponse.json({
-        success: true,
-        message: 'OTP verified',
-      });
+      let token;
+      try {
+        token = sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      } catch (jwtErr) {
+        console.error('JWT sign error:', jwtErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to create auth token' },
+          { status: 500 }
+        );
+      }
+
+      const response = NextResponse.json({ success: true, message: 'OTP verified' });
       response.cookies.set({
         name: 'userToken',
         value: token,
@@ -178,8 +286,21 @@ export async function POST(request) {
         );
       }
 
-      // 3A) Get system tokens from Redis for the Salesforce check
-      const { accessToken, refreshToken, instanceUrl } = await getSystemTokensFromRedis();
+      // 3A) Get system tokens from Redis
+      let accessToken, refreshToken, instanceUrl;
+      try {
+        const tokens = await getSystemTokensFromRedis();
+        accessToken = tokens.accessToken;
+        refreshToken = tokens.refreshToken;
+        instanceUrl = tokens.instanceUrl;
+      } catch (rErr) {
+        console.error('Error reading Redis for system tokens:', rErr);
+        return NextResponse.json(
+          { success: false, message: 'Error reading system tokens' },
+          { status: 500 }
+        );
+      }
+
       if (!accessToken || !refreshToken || !instanceUrl) {
         return NextResponse.json(
           { success: false, message: 'System user tokens are not set yet' },
@@ -187,13 +308,22 @@ export async function POST(request) {
         );
       }
 
-      // 3B) Connect to Salesforce (similar to send-otp)
-      const conn = new jsforce.Connection({
-        oauth2: getOAuth2(),
-        accessToken,
-        refreshToken,
-        instanceUrl,
-      });
+      // 3B) Connect to Salesforce
+      let conn;
+      try {
+        conn = new jsforce.Connection({
+          oauth2: getOAuth2(),
+          accessToken,
+          refreshToken,
+          instanceUrl,
+        });
+      } catch (sfConnErr) {
+        console.error('SF Connection init error:', sfConnErr);
+        return NextResponse.json(
+          { success: false, message: 'Salesforce connection init error' },
+          { status: 500 }
+        );
+      }
 
       // 3C) Check if PersonEmail exists in SF
       const querySF = `
@@ -202,49 +332,97 @@ export async function POST(request) {
         WHERE PersonEmail = '${email}'
         LIMIT 1
       `;
-      const result = await conn.query(querySF);
+      let result;
+      try {
+        result = await conn.query(querySF);
+      } catch (sfQueryErr) {
+        console.error('Salesforce query error:', sfQueryErr);
+        return NextResponse.json(
+          { success: false, message: 'Error querying Salesforce' },
+          { status: 500 }
+        );
+      }
+
       if (result.totalSize === 0) {
         return NextResponse.json(
-          { success: false, message: `No Salesforce account found for email: ${email}` },
+          {
+            success: false,
+            message: `No Salesforce account found for email: ${email}`,
+          },
           { status: 404 }
         );
       }
 
       // 3D) Generate magic link token & expiry
-      const tokenBytes = randomBytes(20);
-      const magicToken = tokenBytes.toString('hex');
+      let magicToken;
+      try {
+        const tokenBytes = randomBytes(20);
+        magicToken = tokenBytes.toString('hex');
+      } catch (randErr) {
+        console.error('Error generating random bytes for magic token:', randErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to generate magic token' },
+          { status: 500 }
+        );
+      }
+
       const expiresAt = new Date(Date.now() + 5 * 60_000); // e.g. 5 min
 
-      // 3E) Store in DB (assuming you have a MagicLink model)
-      await prisma.magicLink.create({
-        data: {
-          token: magicToken,
-          email,
-          expiresAt,
-          used: false,
-        },
-      });
+      // 3E) Store in DB
+      try {
+        await prisma.magicLink.create({
+          data: {
+            token: magicToken,
+            email,
+            expiresAt,
+            used: false,
+          },
+        });
+      } catch (dbErr) {
+        console.error('DB error creating magicLink:', dbErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to store magic link' },
+          { status: 500 }
+        );
+      }
 
-      // 3F) Build the magic link URL (process.env.APP_URL must be set, e.g. http://localhost:3000)
+      // 3F) Build the magic link URL
       const magicLinkUrl = `${process.env.APP_URL}/api/auth/magic-link?token=${magicToken}`;
 
       // 3G) Send the magic link via email
-      const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: Number(process.env.EMAIL_PORT),
-        secure: false,
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
+      let transporter;
+      try {
+        transporter = nodemailer.createTransport({
+          host: process.env.EMAIL_HOST,
+          port: Number(process.env.EMAIL_PORT),
+          secure: false,
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+      } catch (mailErr) {
+        console.error('Nodemailer transporter init error:', mailErr);
+        return NextResponse.json(
+          { success: false, message: 'Email transporter init error' },
+          { status: 500 }
+        );
+      }
 
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Your Magic Link',
-        text: `Click this link to log in:\n\n${magicLinkUrl}\n\nExpires in 5 minutes.`,
-      });
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: 'Your Magic Link',
+          text: `Click this link to log in:\n\n${magicLinkUrl}\n\nExpires in 5 minutes.`,
+        });
+      } catch (sendMailErr) {
+        console.error('Error sending magic link email:', sendMailErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to send magic link email' },
+          { status: 500 }
+        );
+      }
 
       return NextResponse.json({ success: true, message: 'Magic link sent' });
     }
