@@ -7,11 +7,11 @@ import axios from "axios";
 function parseDateFromCourseName(fullName = "") {
   // e.g. "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
   // We want to extract "May 24-25" from the front.
-  const idx = fullName.lastIndexOf(" - ");
-  if (idx !== -1) {
-    return fullName.slice(0, idx);
+  const match = fullName.match(/^([A-Za-z]+\s+\d+-\d+)/);
+  if (match) {
+    return match[1];
   }
-  return fullName; // fallback if there's no " - "
+  return fullName;
 }
 
 export default function ReschedulePage() {
@@ -205,9 +205,8 @@ export default function ReschedulePage() {
                     </span>
                   </div>
                   {/* Card Body (icons) */}
-                  <div className="card-body mt-3">
-                    <div className="flex items-center justify-between flex-wrap gap-6 mt-2 text-gray-600">
-                      {/* Left side: Start Date, Location, Days Until */}
+                  <div className="card-body mt-0">
+                    <div className="flex items-center justify-between gap-6 mt-2 text-gray-600 h-auto">
                       <div className="flex items-center gap-6">
                         {/*
                         <div className="flex items-center">
@@ -230,14 +229,14 @@ export default function ReschedulePage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-col items-center text-sm">
+                      <div className="flex flex-col text-sm self-start">
                         <button
                           onClick={() => handleRescheduleClick(course)}
                           className="px-3 py-1 border border-blue-500 text-blue-500 rounded hover:bg-blue-50"
                         >
                           Reschedule into this course
                         </button>
-                        <p className="text-xs text-gray-500 mt-1">Rescheduled courses are no longer eligible for refunds</p>
+                        
                       </div>
                     </div>
                   </div>
@@ -246,12 +245,12 @@ export default function ReschedulePage() {
             })}
           </div>
 
-          <div className="mt-4 flex justify-end space-x-4">
+          <div className="mt-4 flex justify-center space-x-4">
             <button
               onClick={handleKeepCurrent}
-              className="border border-gray-300 px-4 py-2 rounded hover:bg-gray-100"
+              className="border border-gray-300 text-m px-2 py-1 rounded hover:bg-gray-100"
             >
-              Nevermind, keep my current course
+              Nevermind, Keep My Course
             </button>
           </div>
         </>
