@@ -5,7 +5,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "heroku-postbuild": "npm run build"
+    "prisma:generate": "prisma generate",
+    "heroku-postbuild": "npm run prisma:generate && npm run build"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
@@ -21,11 +22,11 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
+    "eslint": "^9.24.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.3.0"
   },
   "engines": {
     "node": "18.x"
   }
-  
 }
