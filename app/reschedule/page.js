@@ -18,6 +18,21 @@ export default function ReschedulePage() {
   const oldCourseName = searchParams.get("oldCourseName") || "";
   const oldCourseId = searchParams.get("oldCourseId");
 
+  // If you also want to parse a single enrollmentId:
+  const enrollmentId = searchParams.get("enrollmentId");
+
+  // parse enrollmentIds param (an array of objects)
+  const enrollmentIdsParam = searchParams.get("enrollmentIds");
+  let parsedEnrollmentIds = [];
+  if (enrollmentIdsParam) {
+    try {
+      parsedEnrollmentIds = JSON.parse(enrollmentIdsParam);
+      console.log("Parsed enrollment IDs:", parsedEnrollmentIds);
+    } catch (err) {
+      console.error("Failed to parse enrollmentIds:", err);
+    }
+  }
+
   // 1) Fetch future courses
   useEffect(() => {
     if (!oldCourseName) {
@@ -80,7 +95,7 @@ export default function ReschedulePage() {
     );
   };
 
-  // Toggle course selection: unselect if same course is clicked again
+  // Toggle course selection
   const handleSelectCourse = (course) => {
     if (selectedNewCourse && selectedNewCourse.Id === course.Id) {
       setSelectedNewCourse(null);
@@ -97,7 +112,7 @@ export default function ReschedulePage() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  // 3) Next step (disabled if no course selected)
+  // 3) Next step
   const handleNext = () => {
     if (!selectedNewCourse) {
       alert("Please select a course first.");
@@ -112,7 +127,12 @@ export default function ReschedulePage() {
     const payload = {
       oldCourseId,
       varNewCourseId: selectedNewCourse?.Id,
+      varSelectedEnrollments: parsedEnrollmentIds,
+      // If you want singleEnrollmentId as well
+      singleEnrollmentId: enrollmentId,
     };
+
+    console.log("[ReschedulePage] handleConfirm payload:", payload);
 
     try {
       console.log("Sending reschedule request:", payload);
@@ -183,12 +203,9 @@ export default function ReschedulePage() {
                   </p>
                   <p className="text-sm text-gray-600">
                     Location:{" "}
-                    {course.Location__r && course.Location__r.Name
-                      ? course.Location__r.Name
-                      : course.Location__c}
+                    {course.Location__r?.Name || course.Location__c}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {/* Days until snippet */}
                     {hasPassed ? (
                       <span className="text-red-500">Course has passed</span>
                     ) : (

@@ -8,6 +8,12 @@ export async function POST(request) {
     const body = await request.json();
     console.log("[reschedule] Parsed body:", body);
     const { oldCourseId, varNewCourseId, varSelectedEnrollments, varSelectedComboEnrollments } = body;
+    console.log("[reschedule] varSelectedEnrollments received:", varSelectedEnrollments);
+    console.log("[reschedule] varSelectedComboEnrollments received:", varSelectedComboEnrollments);
+
+    if (varSelectedEnrollments && !Array.isArray(varSelectedEnrollments)) {
+      console.warn("[reschedule] varSelectedEnrollments is not an array. Converting to empty array.");
+    }
 
     // Basic validation
     if (!varNewCourseId) {
@@ -28,7 +34,7 @@ export async function POST(request) {
     // 3) Build the Flow REST API URL
     // This example uses the v57.0 endpoint for Autolaunched Flows
     // Replace `Auto_Course_Change_Classroom` with your flow’s actual API Name
-    const flowApiName = "Auto_Rescheduling";
+    const flowApiName = "Auto_Rescheduling_2";
     const flowUrl = `${instanceUrl}/services/data/v63.0/actions/custom/flow/${flowApiName}`;
 
     // 4) Construct the request payload to pass into the flow

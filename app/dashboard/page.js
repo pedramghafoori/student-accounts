@@ -11,25 +11,29 @@ export default function DashboardPage() {
   const [batches, setBatches] = useState([]);
   const [policy, setPolicy] = useState(null);
   const [error, setError] = useState("");
+  const [selectedEnrollments, setSelectedEnrollments] = useState([]);
+
+  function handleToggleEnrollment(id) {
+    console.log("Toggling enrollment", id);
+    setSelectedEnrollments((prev) => {
+      const existingIndex = prev.findIndex((obj) => obj.Id === id);
+      if (existingIndex !== -1) {
+        return prev.filter((obj) => obj.Id !== id);
+      } else {
+        return [...prev, { Id: id }];
+      }
+    });
+  }
 
   const router = useRouter();
 
-  /**
-   * parseCourseName
-   *
-   * Splits text like:
-   *   "March 29 - April 6 National Lifeguard - Pool - TMU"
-   *   "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
-   * into { courseDates, course, location }
-   */
   function parseCourseName(fullName = "") {
     let splitted = fullName.split(" - ");
     let location = "";
     let courseDates = "";
-    let course = fullName; // fallback if parse fails
+    let course = fullName;
 
     if (splitted.length >= 3) {
-      // Multi-dash logic
       location = splitted[splitted.length - 1];
       splitted.pop();
 
@@ -48,7 +52,6 @@ export default function DashboardPage() {
         courseDates = first + " - " + second;
       }
     } else if (splitted.length === 2) {
-      // Single-dash logic
       location = splitted[1];
       const re = /^([A-Za-z]+\s+\d+-\d+)(\s+.*)?$/;
       const match = splitted[0].match(re);
@@ -63,12 +66,6 @@ export default function DashboardPage() {
     return { courseDates, course, location };
   }
 
-  /**
-   * getPolicyForCourse
-   *
-   * Given the number of days until the course starts and the policy object,
-   * returns an object with the appropriate refund and reschedule messages.
-   */
   function getPolicyForCourse(daysUntilStart, policy) {
     if (!policy) {
       return { refund: "", reschedule: "" };
@@ -98,9 +95,6 @@ export default function DashboardPage() {
     }
   }
 
-  /******************************************************
-   * 1) Fetch Accounts on Mount
-   ******************************************************/
   useEffect(() => {
     axios
       .get("/api/salesforce")
@@ -120,9 +114,6 @@ export default function DashboardPage() {
       .catch((err) => setError(err.message));
   }, []);
 
-  /******************************************************
-   * 2) Dynamically Fetch Refund Policy (Poll every 5 minutes)
-   ******************************************************/
   useEffect(() => {
     const fetchPolicy = () => {
       axios
@@ -140,22 +131,16 @@ export default function DashboardPage() {
         );
     };
 
-    fetchPolicy(); // initial fetch
-    const intervalId = setInterval(fetchPolicy, 300000); // 5 minutes
+    fetchPolicy();
+    const intervalId = setInterval(fetchPolicy, 300000);
     return () => clearInterval(intervalId);
   }, []);
 
-  /******************************************************
-   * 3) Handle Account Selection
-   ******************************************************/
   const handleSelect = (accountId) => {
     const account = accounts.find((a) => a.Id === accountId);
     setSelectedAccount(account);
   };
 
-  /******************************************************
-   * 4) Fetch Batches for Selected Account
-   ******************************************************/
   useEffect(() => {
     if (!selectedAccount) return;
 
@@ -187,7 +172,6 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-semibold mb-6">Accounts</h1>
         {error && <p className="text-red-600 mb-4">{error}</p>}
         <div className="flex">
-          {/* Main content area for the selected account’s courses */}
           <div className="flex-1 ml-6 bg-white shadow p-6 rounded-lg">
             {selectedAccount ? (
               <div>
@@ -200,34 +184,25 @@ export default function DashboardPage() {
                       Related Course Batches
                     </h3>
                     {batches.map((enr) => {
-                      const { courseDates, course, location } =
-                        parseCourseName(enr.CourseName);
-                      const threshold =
-                        (policy && policy.daysBeforeReschedule) || 2;
-                      const hasPassed = enr.DaysUntilStart < 0;
-                      console.log(
-                        `Card ${enr.Id}: DaysUntilStart = ${enr.DaysUntilStart}, Policy Threshold = ${threshold}`
-                      );
+                      console.log("Debug each enrollment:", enr);
+
                       return (
-                        <div
-                          key={enr.Id}
-                          className="card mb-4 p-4 border border-gray-300 rounded-md"
-                        >
+                        <div key={enr.Id} className="card mb-4 p-4 border border-gray-300 rounded-md">
                           <div className="card-header">
                             <a href="#" className="card-title">
-                              {course || "Untitled Course"}
+                              {enr.CourseName || "Untitled Course"}
                             </a>
                           </div>
                           <div className="card-body">
                             <div className="card-detail">
-                              <span className="icon">📅</span> {courseDates}
+                              <span className="icon">📅</span> {enr.CourseDates}
                             </div>
                             <div className="card-detail">
-                              <span className="icon">📍</span> {location}
+                              <span className="icon">📍</span> {enr.Location}
                             </div>
                             <div className="card-detail">
                               <span className="icon">⏰</span>{" "}
-                              {hasPassed ? (
+                              {enr.DaysUntilStart < 0 ? (
                                 "Course has passed"
                               ) : (
                                 <strong>Days Until: {enr.DaysUntilStart}</strong>
@@ -235,18 +210,35 @@ export default function DashboardPage() {
                             </div>
                           </div>
                           <div className="card-footer mt-4 flex flex-col items-end">
-                            {enr.DaysUntilStart > threshold ? (
+                            {enr.DaysUntilStart > (policy && policy.daysBeforeReschedule) ? (
                               <>
                                 <a href="#" onClick={(e) => {
-                                    e.preventDefault();
-                                    // Use the parsed course name instead of trying to get Product__r.Name.
-                                    const parsed = parseCourseName(enr.CourseName);
-                                    const courseName = parsed.course || enr.CourseName || "Unknown course";
-                                    router.push(
-                                      `/reschedule?oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.Id}`
-                                    );
-                                  }}
-                                  className="text-blue-500 underline mb-2">
+                                  e.preventDefault();
+                                  console.log("Manually building a new enrollments array for:", enr.Id);
+
+                                  let newEnrollments = [...selectedEnrollments];
+                                  const existingIndex = newEnrollments.findIndex((obj) => obj.Id === enr.Id);
+                                  if (existingIndex !== -1) {
+                                    newEnrollments = newEnrollments.filter((obj) => obj.Id !== enr.Id);
+                                  } else {
+                                    newEnrollments.push({ Id: enr.Id });
+                                  }
+
+                                  setSelectedEnrollments(newEnrollments);
+
+                                  const parsed = parseCourseName(enr.CourseName);
+                                  const courseName = parsed.course || enr.CourseName || "Unknown course";
+                                  console.log("Navigating to reschedule with updated enrollments:", {
+                                    oldCourseName: courseName,
+                                    oldCourseId: enr.BatchId,
+                                    newEnrollments,
+                                  });
+
+                                  router.push(
+                                    `/reschedule?oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.BatchId}&enrollmentId=${enr.Id}&enrollmentIds=${JSON.stringify(newEnrollments)}`
+                                  );
+                                }}
+                                className="text-blue-500 underline mb-2">
                                   Reschedule (
                                   {policy?.reschedulePolicy &&
                                     getPolicyForCourse(enr.DaysUntilStart, policy).reschedule}
