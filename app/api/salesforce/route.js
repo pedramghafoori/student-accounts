@@ -1,4 +1,3 @@
-// app/api/salesforce/route.js
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verify } from 'jsonwebtoken';
@@ -17,6 +16,12 @@ async function getSystemTokensFromRedis() {
 
 export async function GET() {
   try {
+    // 0) If it's a HEAD request, do NOT consume the token
+    if (request.method === 'HEAD') {
+      console.log('HEAD request detected, not marking token as used');
+      return NextResponse.json({ success: true, message: 'HEAD request, token NOT used' });
+    }
+
     console.log("Starting GET /api/salesforce route");
     // 1) Retrieve the JWT from our cookie
     const cookieStore = await cookies();
