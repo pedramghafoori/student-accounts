@@ -4,6 +4,16 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import axios from "axios";
 
+function parseDateFromCourseName(fullName = "") {
+  // e.g. "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
+  // We want to extract "May 24-25" from the front.
+  const idx = fullName.lastIndexOf(" - ");
+  if (idx !== -1) {
+    return fullName.slice(0, idx);
+  }
+  return fullName; // fallback if there's no " - "
+}
+
 export default function ReschedulePage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -18,10 +28,9 @@ export default function ReschedulePage() {
   const oldCourseName = searchParams.get("oldCourseName") || "";
   const oldCourseId = searchParams.get("oldCourseId");
 
-  // If you also want to parse a single enrollmentId:
   const enrollmentId = searchParams.get("enrollmentId");
 
-  // parse enrollmentIds param (an array of objects)
+  // Parse enrollmentIds (array of objects)
   const enrollmentIdsParam = searchParams.get("enrollmentIds");
   let parsedEnrollmentIds = [];
   if (enrollmentIdsParam) {
@@ -33,12 +42,12 @@ export default function ReschedulePage() {
     }
   }
 
-  // 1) Fetch future courses
   useEffect(() => {
     if (!oldCourseName) {
       setError("Course type not provided in URL.");
       return;
     }
+
     async function fetchFutureCourses() {
       try {
         setLoading(true);
@@ -63,7 +72,7 @@ export default function ReschedulePage() {
     fetchFutureCourses();
   }, [oldCourseName]);
 
-  // Compute unique locations from the fetched courses
+  // Grab unique locations from the fetched courses
   const uniqueLocations = useMemo(() => {
     const locsSet = new Set();
     futureCourses.forEach((course) => {
@@ -75,7 +84,7 @@ export default function ReschedulePage() {
     return Array.from(locsSet).map((loc) => ({ id: loc, name: loc }));
   }, [futureCourses]);
 
-  // Filter courses based on selected locations.
+  // Filter courses by selected location
   const filteredCourses = useMemo(() => {
     if (selectedLocations.length === 0) {
       return futureCourses;
@@ -86,49 +95,36 @@ export default function ReschedulePage() {
     });
   }, [futureCourses, selectedLocations]);
 
-  // Toggle a location in the filter
-  const toggleLocation = (location) => {
+  function toggleLocation(location) {
     setSelectedLocations((prev) =>
       prev.includes(location)
         ? prev.filter((loc) => loc !== location)
         : [...prev, location]
     );
-  };
+  }
 
-  // Toggle course selection
-  const handleSelectCourse = (course) => {
+  function handleSelectCourse(course) {
     if (selectedNewCourse && selectedNewCourse.Id === course.Id) {
       setSelectedNewCourse(null);
     } else {
       setSelectedNewCourse(course);
     }
-  };
+  }
 
-  // Helper function to calculate days until the course start date
-  const getDaysUntil = (startDate) => {
+  // Calculate days until course start date
+  function getDaysUntil(startDate) {
     const start = new Date(startDate);
     const today = new Date();
     const diffTime = start.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
+  }
 
-  // 3) Next step
-  const handleNext = () => {
-    if (!selectedNewCourse) {
-      alert("Please select a course first.");
-      return;
-    }
-    setStep(2);
-  };
-
-  // 4) Confirm reschedule
-  const handleConfirm = async () => {
-    // Prepare the payload
+  async function handleConfirm() {
     const payload = {
-    recordId: enrollmentId,
-    varNewCourseId: selectedNewCourse?.Id,
-    varSelectedEnrollments: parsedEnrollmentIds,
-    singleEnrollmentId: enrollmentId,
+      recordId: enrollmentId,
+      varNewCourseId: selectedNewCourse?.Id,
+      varSelectedEnrollments: parsedEnrollmentIds,
+      singleEnrollmentId: enrollmentId,
     };
 
     console.log("[ReschedulePage] handleConfirm payload:", payload);
@@ -136,28 +132,33 @@ export default function ReschedulePage() {
     try {
       console.log("Sending reschedule request:", payload);
       await axios.post("/api/reschedule", payload);
-      // If successful, navigate away or show success message
       router.push("/dashboard");
     } catch (err) {
       console.error("Error rescheduling:", err);
       setError(err?.response?.data?.message || "Error rescheduling course.");
     }
-  };
+  }
 
-  // 5) Handle "Nevermind, keep my current course"
-  const handleKeepCurrent = () => {
+  function handleKeepCurrent() {
     console.log("Keeping current course, no reschedule.");
     router.push("/dashboard");
-  };
+  }
+
+  function handleRescheduleClick(course) {
+    setSelectedNewCourse(course);
+    setStep(2);
+  }
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
+      {/* Step 1: Choose Future Course */}
       {step === 1 && (
         <>
-          <h1 className="text-2xl font-bold mb-4">
+          <h1 className="text-2xl mb-4">
             Reschedule Your Course: {oldCourseName || "Unknown"}
           </h1>
-          {/* Location Filter Bar */}
+
+          {/* Location Filter */}
           <div className="mb-4">
             <p className="text-gray-700 mb-2">Filter by Location:</p>
             <div className="flex flex-wrap gap-2">
@@ -183,41 +184,68 @@ export default function ReschedulePage() {
           </p>
           {loading && <p className="text-gray-500">Loading future courses...</p>}
           {error && <p className="text-red-600 mb-4">{error}</p>}
+
           <div className="space-y-4 max-h-72 overflow-y-auto border border-gray-200 p-4 rounded">
             {filteredCourses.map((course) => {
-              const hasPassed = course.DaysUntilStart < 0;
+              const hasPassed = course.DaysUntilStart < 0; // or compute from data if available
               return (
                 <div
                   key={course.Id}
                   onClick={() => handleSelectCourse(course)}
-                  className={`p-4 border rounded cursor-pointer ${
+                  className={`card mb-2 p-4 border rounded-md cursor-pointer ${
                     selectedNewCourse?.Id === course.Id
                       ? "border-blue-500 bg-blue-50"
                       : "border-gray-300 bg-white"
                   }`}
                 >
-                  <h3 className="font-semibold">{course.Name}</h3>
-                  <p className="text-sm text-gray-600">
-                    Start: {course.Start_date_time__c}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Location:{" "}
-                    {course.Location__r?.Name || course.Location__c}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {hasPassed ? (
-                      <span className="text-red-500">Course has passed</span>
-                    ) : (
-                      <span>
-                        <strong>Days Until:</strong>{" "}
-                        {getDaysUntil(course.Start_date_time__c)}
-                      </span>
-                    )}
-                  </p>
+                  {/* Card Header */}
+                  <div className="card-header">
+                    <span className="text-[#0070d9] text-lg">
+                      {parseDateFromCourseName(course.Name || "Untitled Course")}
+                    </span>
+                  </div>
+                  {/* Card Body (icons) */}
+                  <div className="card-body mt-3">
+                    <div className="flex items-center justify-between flex-wrap gap-6 mt-2 text-gray-600">
+                      {/* Left side: Start Date, Location, Days Until */}
+                      <div className="flex items-center gap-6">
+                        {/*
+                        <div className="flex items-center">
+                          <span className="mr-2">📅</span>
+                          {course.Start_date_time__c}
+                        </div>
+                        */}
+                        {/* Location */}
+                        <div className="flex items-center">
+                          <span className="mr-2">📍</span>
+                          {course.Location__r?.Name || course.Location__c}
+                        </div>
+                        {/* Days Until or Course Passed */}
+                        <div className="flex items-center">
+                          <span className="mr-2">⏰</span>
+                          {hasPassed ? (
+                            <span className="text-red-500">Course has passed</span>
+                          ) : (
+                            <span>Days Until: {getDaysUntil(course.Start_date_time__c)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center text-sm">
+                        <button
+                          onClick={() => handleRescheduleClick(course)}
+                          className="px-3 py-1 border border-blue-500 text-blue-500 rounded hover:bg-blue-50"
+                        >
+                          Reschedule into this course
+                        </button>
+                        <p className="text-xs text-gray-500 mt-1">Rescheduled courses are no longer eligible for refunds</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
           </div>
+
           <div className="mt-4 flex justify-end space-x-4">
             <button
               onClick={handleKeepCurrent}
@@ -225,21 +253,11 @@ export default function ReschedulePage() {
             >
               Nevermind, keep my current course
             </button>
-            <button
-              onClick={handleNext}
-              disabled={!selectedNewCourse}
-              className={`px-4 py-2 rounded text-white ${
-                selectedNewCourse
-                  ? "bg-blue-600 hover:bg-blue-700"
-                  : "bg-gray-400 cursor-not-allowed"
-              }`}
-            >
-              Next
-            </button>
           </div>
         </>
       )}
 
+      {/* Step 2: Confirm Reschedule */}
       {step === 2 && (
         <>
           <h1 className="text-2xl font-bold mb-4">Confirm Reschedule</h1>
@@ -258,6 +276,7 @@ export default function ReschedulePage() {
             By confirming, you agree to pay the additional fee (if any) and move
             your enrollment to the new course.
           </p>
+          {error && <p className="text-red-600 mb-4">{error}</p>}
           <div className="flex justify-end space-x-4">
             <button
               onClick={() => setStep(1)}

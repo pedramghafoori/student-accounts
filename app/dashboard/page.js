@@ -197,8 +197,14 @@ export default function DashboardPage() {
 
   return (
     <Layout accounts={accounts} onSelectAccount={handleSelect}>
-      <div className="container mx-auto py-10 px-6">
-        <h1 className="text-3xl font-semibold mb-6">{selectedAccount.Name}</h1>
+      <div className="p-6">
+      {selectedAccount ? (
+          <h1 className="text-3xl font-semibold mb-6">{selectedAccount.Name}</h1>
+        ) : (
+          <h1 className="text-3xl font-semibold mb-6">
+            Please select a student from the left panel
+          </h1>
+        )}
         {error && <p className="text-red-600 mb-4">{error}</p>}
         <div className="flex">
           <div className="flex-1 bg-white shadow p-6 rounded-lg">
