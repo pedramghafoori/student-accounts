@@ -29,7 +29,7 @@ export async function POST(request) {
     // This example uses the v57.0 endpoint for Autolaunched Flows
     // Replace `Auto_Course_Change_Classroom` with your flow’s actual API Name
     const flowApiName = "Auto_Rescheduling";
-    const flowUrl = `${instanceUrl}/services/data/v63.0/actions/standard/flow/${flowApiName}`;
+    const flowUrl = `${instanceUrl}/services/data/v63.0/actions/custom/flow/${flowApiName}`;
 
     // 4) Construct the request payload to pass into the flow
     // NOTE: The variable names must match exactly the ones in your flow.
