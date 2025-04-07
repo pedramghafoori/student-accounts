@@ -14,7 +14,7 @@ async function getSystemTokensFromRedis() {
     return JSON.parse(tokenString);
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
     // 0) If it's a HEAD request, do NOT consume the token
     if (request.method === 'HEAD') {

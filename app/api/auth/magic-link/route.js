@@ -1,25 +1,11 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { sign } from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
+import { sign } from 'jsonwebtoken';
 
+// GET = Step 1: Show “Confirm Login” page (do not mark token as used).
 export async function GET(request) {
   try {
-    // Ensure required env vars are present
-    if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { success: false, message: 'Server config error: missing JWT_SECRET' },
-        { status: 500 }
-      );
-    }
-    if (!process.env.APP_URL) {
-      return NextResponse.json(
-        { success: false, message: 'Server config error: missing APP_URL' },
-        { status: 500 }
-      );
-    }
-
-    // 1) Parse query param
+    // 1) Parse token from query string
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
     if (!token) {
@@ -29,35 +15,66 @@ export async function GET(request) {
       );
     }
 
-    // 2) Look up in DB
-    let record;
-    try {
-      record = await prisma.magicLink.findUnique({ where: { token } });
-    } catch (dbErr) {
-      console.error('Database error while finding token:', dbErr);
-      return NextResponse.json(
-        { success: false, message: 'DB error on magicLink lookup' },
-        { status: 500 }
-      );
-    }
-
+    // 2) Look up the magic link in DB (but do NOT mark used)
+    const record = await prisma.magicLink.findUnique({ where: { token } });
     if (!record) {
       return NextResponse.json(
         { success: false, message: 'Invalid token' },
         { status: 400 }
       );
     }
-
     if (record.used) {
       return NextResponse.json(
         { success: false, message: 'Token already used' },
         { status: 400 }
       );
     }
+    if (record.expiresAt < new Date()) {
+      return NextResponse.json(
+        { success: false, message: 'Token expired' },
+        { status: 401 }
+      );
+    }
 
-    // Check expiry
-    const now = new Date();
-    if (record.expiresAt < now) {
+    // 3) Redirect to the new “confirm” page instead of returning HTML
+    return NextResponse.redirect(`${process.env.APP_URL}/login/confirm?token=${token}`);
+  } catch (err) {
+    console.error('Magic link GET error:', err);
+    return NextResponse.json(
+      { success: false, message: `Unexpected error: ${err.message}` },
+      { status: 500 }
+    );
+  }
+}
+
+// POST = Step 2: Mark token used, create JWT, set cookie, redirect to /dashboard
+export async function POST(request) {
+  try {
+    // 1) Parse form data. This is a standard Form submission.
+    const formData = await request.formData();
+    const token = formData.get('token');
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'No token in form data' },
+        { status: 400 }
+      );
+    }
+
+    // 2) Find the record again
+    const record = await prisma.magicLink.findUnique({ where: { token } });
+    if (!record) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid token' },
+        { status: 400 }
+      );
+    }
+    if (record.used) {
+      return NextResponse.json(
+        { success: false, message: 'Token already used' },
+        { status: 400 }
+      );
+    }
+    if (record.expiresAt < new Date()) {
       return NextResponse.json(
         { success: false, message: 'Token expired' },
         { status: 401 }
@@ -65,22 +82,13 @@ export async function GET(request) {
     }
 
     // 3) Mark token as used
-    try {
-      await prisma.magicLink.update({
-        where: { token },
-        data: { used: true },
-      });
-    } catch (dbErr) {
-      console.error('Database error while updating token as used:', dbErr);
-      return NextResponse.json(
-        { success: false, message: 'DB error on token update' },
-        { status: 500 }
-      );
-    }
+    await prisma.magicLink.update({
+      where: { token },
+      data: { used: true },
+    });
 
-    // 4) Create a JWT with user’s email
+    // 4) Create JWT & set cookie
     const userEmail = record.email;
-
     let jwt;
     try {
       jwt = sign({ email: userEmail }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -92,9 +100,8 @@ export async function GET(request) {
       );
     }
 
-    // 5) Set the cookie, redirect to dashboard
+    // 5) Redirect user to /dashboard, setting userToken cookie
     const response = NextResponse.redirect(`${process.env.APP_URL}/dashboard`);
-
     response.cookies.set({
       name: 'userToken',
       value: jwt,
@@ -106,7 +113,10 @@ export async function GET(request) {
 
     return response;
   } catch (err) {
-    console.error('Magic link error:', err);
-    return NextResponse.json({ success: false, message: `Unexpected error: ${err.message}` }, { status: 500 });
+    console.error('Magic link POST error:', err);
+    return NextResponse.json(
+      { success: false, message: `Unexpected error: ${err.message}` },
+      { status: 500 }
+    );
   }
 }
