@@ -27,6 +27,15 @@ export default function DashboardPage() {
     });
   }
 
+  /**
+   * Example input: "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
+   * Returns:
+   *   {
+   *     courseDates: "May 24-25",
+   *     course: "Standard First Aid with CPR-C (SFA)",
+   *     location: "TMU"
+   *   }
+   */
   function parseCourseName(fullName = "") {
     let splitted = fullName.split(" - ");
     let location = "";
@@ -34,12 +43,14 @@ export default function DashboardPage() {
     let course = fullName;
 
     if (splitted.length >= 3) {
+      // e.g. ["May 24-25 Standard First Aid with CPR-C (SFA)", "TMU"]
       location = splitted[splitted.length - 1];
       splitted.pop();
 
       const first = splitted[0] || "";
       const second = splitted[1] || "";
       let secondParts = second.split(" ");
+
       if (secondParts.length >= 2) {
         courseDates = first + " - " + secondParts[0] + " " + secondParts[1];
         const remainderCourse = secondParts.slice(2).join(" ");
@@ -52,10 +63,14 @@ export default function DashboardPage() {
         courseDates = first + " - " + second;
       }
     } else if (splitted.length === 2) {
+      // e.g. ["May 24-25 Standard First Aid with CPR-C (SFA)", "TMU"]
       location = splitted[1];
+
       const re = /^([A-Za-z]+\s+\d+-\d+)(\s+.*)?$/;
       const match = splitted[0].match(re);
       if (match) {
+        // match[1] = "May 24-25"
+        // match[2] = " Standard First Aid with CPR-C (SFA)"
         courseDates = match[1].trim();
         const remainder = (match[2] || "").trim();
         course = remainder;
@@ -170,24 +185,20 @@ export default function DashboardPage() {
   return (
     <Layout accounts={accounts} onSelectAccount={handleSelect}>
       <div className="container mx-auto py-10 px-6">
-        <h1 className="text-3xl font-semibold mb-6">Accounts</h1>
+        <h1 className="text-3xl font-semibold mb-6">{selectedAccount.Name}</h1>
         {error && <p className="text-red-600 mb-4">{error}</p>}
         <div className="flex">
           <div className="flex-1 ml-6 bg-white shadow p-6 rounded-lg">
             {selectedAccount ? (
               <div>
-                <h2 className="text-xl font-bold mb-4">
-                  {selectedAccount.Name}
-                </h2>
+                
                 {batches.length > 0 ? (
                   <div>
-                    <h3 className="font-semibold mb-4">
-                      Related Course Batches
-                    </h3>
+                   
                     {batches.map((enr) => {
                       console.log("Debug each enrollment:", enr);
 
-                      const { courseDates, location } = parseCourseName(
+                      const { courseDates, course, location } = parseCourseName(
                         enr.CourseName
                       );
                       const policyData =
@@ -200,35 +211,35 @@ export default function DashboardPage() {
                           className="card mb-4 p-4 border border-gray-300 rounded-md"
                         >
                           <div className="card-header">
-                            <a href="#" className="card-title font-medium">
-                              {enr.CourseName || "Untitled Course"}
-                            </a>
+                            {/* Course Title in bold + #0070d9 */}
+                            <span className="text-[#0070d9] font-bold">
+                              {course || "Untitled Course"}
+                            </span>
                           </div>
                           <div className="card-body">
-                            {/* Put date, location, Days Until,
-                                and the Reschedule/Refund links in one row */}
-                            <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
+                            {/* Single row for date, location, days, and links */}
+                            <div className="flex items-center justify-between flex-wrap gap-6 mt-2">
                               {/* Left side: Date/Location/Days */}
-                              <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-6">
                                 {/* Course Dates */}
                                 <div className="flex items-center">
-                                  <span className="mr-1">📅</span>
+                                  <span className="mr-2">📅</span>
                                   {courseDates || enr.CourseDates}
                                 </div>
                                 {/* Location */}
                                 <div className="flex items-center">
-                                  <span className="mr-1">📍</span>
+                                  <span className="mr-2">📍 </span>
                                   {location || enr.Location}
                                 </div>
                                 {/* Days Until */}
                                 <div className="flex items-center">
-                                  <span className="mr-1">⏰</span>
+                                  <span className="mr-2">⏰ </span>
                                   {enr.DaysUntilStart < 0 ? (
                                     "Course has passed"
                                   ) : (
-                                    <strong>
+                                    <span>
                                       Days Until: {enr.DaysUntilStart}
-                                    </strong>
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -265,11 +276,8 @@ export default function DashboardPage() {
 
                                         setSelectedEnrollments(newEnrollments);
 
-                                        const parsed = parseCourseName(
-                                          enr.CourseName
-                                        );
                                         const courseName =
-                                          parsed.course ||
+                                          course ||
                                           enr.CourseName ||
                                           "Unknown course";
                                         console.log(
@@ -295,16 +303,13 @@ export default function DashboardPage() {
                                       }}
                                       className="text-blue-500 underline"
                                     >
-                                      Reschedule (
-                                      {policyData?.reschedule}
-                                      )
+                                      Reschedule ({policyData?.reschedule})
                                     </a>
                                     <a
                                       href="#"
                                       className="text-blue-500 underline"
                                     >
-                                      Refund (
-                                      {policyData?.refund})
+                                      Refund ({policyData?.refund})
                                     </a>
                                   </>
                                 ) : (
