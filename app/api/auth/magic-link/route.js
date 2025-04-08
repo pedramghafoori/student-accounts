@@ -101,14 +101,13 @@ export async function POST(request) {
     }
 
     // 5) Redirect user to /dashboard, setting userToken cookie
-    const response = NextResponse.redirect(`${process.env.APP_URL}/dashboard`);
-    response.cookies.set({
-      name: 'userToken',
-      value: jwt,
+    const response = NextResponse.redirect(`${process.env.APP_URL}/dashboard`, { status: 302 });
+    response.cookies.set('userToken', jwt, {
       httpOnly: true,
       path: '/',
       maxAge: 60 * 60, // 1 hour
       secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
     });
 
     return response;
