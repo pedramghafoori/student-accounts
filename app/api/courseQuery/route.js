@@ -1,3 +1,4 @@
+// /app/api/courseQuery/route.js
 import { NextResponse } from 'next/server';
 import jsforce from 'jsforce';
 import { getSystemTokensFromRedis, getOAuth2 } from '@/lib/salesforce';
@@ -30,8 +31,8 @@ export async function GET(request) {
       instanceUrl,
     });
 
-    // The SOQL query
-    const soql = `
+    // Query standard course enrollments via Account.
+    const accountSoql = `
       SELECT
         Id,
         Name,
@@ -50,22 +51,65 @@ export async function GET(request) {
       FROM Account
       WHERE Id = '${accountId}'
     `;
-    console.log('[courseQuery] Running SOQL:', soql);
+    console.log('[courseQuery] Running Account SOQL:', accountSoql);
+    const accountResult = await conn.query(accountSoql);
 
-    const result = await conn.query(soql);
-    console.log('[courseQuery] Query Result Records:', result.records);
+    // Query Registration__c for combo enrollments using the correct lookup field (AccountId)
+    const registrationSoql = `
+      SELECT
+        Id,
+        Name,
+        (
+          SELECT
+            Id,
+            Name,
+            Course_Start_Date_Time__c,
+            Classroom__c
+          FROM Combo_Course_Enrollment__r
+        )
+      FROM Opportunity
+      WHERE AccountId = '${accountId}'
+    `;
+    console.log('[courseQuery] Running Registration SOQL:', registrationSoql);
+    const registrationResult = await conn.query(registrationSoql);
+    console.log('[courseQuery] Registration Query Result:', registrationResult.records);
 
-    // Log the subrecords if they exist
-    if (result.records.length > 0 && result.records[0].Course_Enrolments__r) {
-      console.log(
-        'Subrecords:',
-        result.records[0].Course_Enrolments__r.records
-      );
+    let enrolments = [];
+    // Check if any Registration__c record has combo enrollments.
+    if (registrationResult.records && registrationResult.records.length > 0) {
+      for (const reg of registrationResult.records) {
+        if (
+          reg.Combo_Course_Enrollment__r &&
+          reg.Combo_Course_Enrollment__r.records &&
+          reg.Combo_Course_Enrollment__r.records.length > 0
+        ) {
+          enrolments = reg.Combo_Course_Enrollment__r.records.map((en) => {
+            const startDateTime = en.Course_Start_Date_Time__c;
+            const daysUntilStart = startDateTime
+              ? Math.ceil((new Date(startDateTime).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+              : null;
+            return {
+              Id: en.Id,
+              EnrolmentName: en.Name,
+              BatchId: null,         // Combo enrollments may not have an associated Batch
+              BatchLookup: null,
+              CourseName: reg.Name || en.Name,
+              ProductName: null,     // Map a product field here if applicable
+              DaysUntilStart: daysUntilStart,
+              StartDateTime: startDateTime,
+              Classroom: en.Classroom__c,
+              isCombo: true          // Optional flag to indicate combo enrollment
+            };
+          });
+          // If one registration record returns combo enrollments, we use them.
+          break;
+        }
+      }
     }
 
-    // Transform the data, flattening the nested fields
-    const transformedRecords = result.records.map((acc) => {
-      let enrolments = [];
+    // If no combo enrollments exist, fall back to standard enrollments from Account.
+    if (enrolments.length === 0 && accountResult.records && accountResult.records.length > 0) {
+      const acc = accountResult.records[0];
       if (acc.Course_Enrolments__r && acc.Course_Enrolments__r.records) {
         enrolments = acc.Course_Enrolments__r.records.map((en) => ({
           Id: en.Id,
@@ -76,15 +120,17 @@ export async function GET(request) {
           ProductName: en.Batch__r?.Product__r?.Name,
           DaysUntilStart: en.Batch__r?.Days_until_Start_Date__c,
           StartDateTime: en.Batch__r?.Start_date_time__c,
+          isCombo: false
         }));
       }
+    }
 
-      return {
-        AccountId: acc.Id,
-        AccountName: acc.Name,
-        Enrolments: enrolments,
-      };
-    });
+    // Transform the final record to a unified structure.
+    const transformedRecords = accountResult.records.map((acc) => ({
+      AccountId: acc.Id,
+      AccountName: acc.Name,
+      Enrolments: enrolments
+    }));
 
     return NextResponse.json({
       success: true,

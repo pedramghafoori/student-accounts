@@ -5,6 +5,93 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import Layout from "@/components/Layout";
 
+// Helper: Parse a classroom string in the format "April 12-13 Bronze Harbord"
+// into an object with date and location.
+function parseBronzeClassroom(classroomString = "") {
+  const parts = classroomString.split(" ");
+  if (parts.length >= 4) {
+    // Assume first two parts form the date, and the last part is location.
+    const datePart = parts.slice(0, 2).join(" "); // e.g., "April 12-13"
+    const locationPart = parts[parts.length - 1]; // e.g., "Harbord"
+    return { date: datePart, location: locationPart };
+  }
+  return { date: classroomString, location: "" };
+}
+
+/**
+ * Parses a course name in the format:
+ * "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
+ * Returns an object with courseDates, course, and location.
+ */
+function parseCourseName(fullName = "") {
+  let splitted = fullName.split(" - ");
+  let location = "";
+  let courseDates = "";
+  let course = fullName;
+
+  if (splitted.length >= 3) {
+    // e.g. ["May 24-25 Standard First Aid with CPR-C (SFA)", "TMU"]
+    location = splitted[splitted.length - 1];
+    splitted.pop();
+    const first = splitted[0] || "";
+    const second = splitted[1] || "";
+    let secondParts = second.split(" ");
+    if (secondParts.length >= 2) {
+      courseDates = first + " - " + secondParts[0] + " " + secondParts[1];
+      const remainderCourse = secondParts.slice(2).join(" ");
+      if (splitted.length === 3) {
+        course = remainderCourse + (splitted[2] ? " - " + splitted[2] : "");
+      } else {
+        course = remainderCourse;
+      }
+    } else {
+      courseDates = first + " - " + second;
+    }
+  } else if (splitted.length === 2) {
+    // e.g. ["May 24-25 Standard First Aid with CPR-C (SFA)", "TMU"]
+    location = splitted[1];
+    const re = /^([A-Za-z]+\s+\d+-\d+)(\s+.*)?$/;
+    const match = splitted[0].match(re);
+    if (match) {
+      courseDates = match[1].trim();
+      const remainder = (match[2] || "").trim();
+      course = remainder;
+    } else {
+      course = splitted[0];
+    }
+  }
+  return { courseDates, course, location };
+}
+
+function getPolicyForCourse(daysUntilStart, policy) {
+  if (!policy) {
+    return { refund: "", reschedule: "" };
+  }
+  const refundPolicy = policy.refundPolicy;
+  const reschedulePolicy = policy.reschedulePolicy;
+  if (daysUntilStart > 5) {
+    return {
+      refund: refundPolicy["More than 5 days1*"],
+      reschedule: reschedulePolicy["More than 5 days1*"],
+    };
+  } else if (daysUntilStart <= 5 && daysUntilStart >= 3) {
+    return {
+      refund: refundPolicy["3-5 days1*"],
+      reschedule: reschedulePolicy["3-5 days1*"],
+    };
+  } else if (daysUntilStart < 3 && daysUntilStart >= 0) {
+    return {
+      refund: refundPolicy["2 days or less1*"],
+      reschedule: reschedulePolicy["2 days or less1*"],
+    };
+  } else {
+    return {
+      refund: refundPolicy["After course begins"],
+      reschedule: reschedulePolicy["After course begins"],
+    };
+  }
+}
+
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
@@ -37,89 +124,6 @@ export default function DashboardPage() {
       return `Starts in ${weeks} weeks`;
     } else {
       return `Starts in ${days} days`;
-    }
-  }
-
-  /**
-   * Example input: "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
-   * Returns:
-   *   {
-   *     courseDates: "May 24-25",
-   *     course: "Standard First Aid with CPR-C (SFA)",
-   *     location: "TMU"
-   *   }
-   */
-  function parseCourseName(fullName = "") {
-    let splitted = fullName.split(" - ");
-    let location = "";
-    let courseDates = "";
-    let course = fullName;
-
-    if (splitted.length >= 3) {
-      // e.g. ["May 24-25 Standard First Aid with CPR-C (SFA)", "TMU"]
-      location = splitted[splitted.length - 1];
-      splitted.pop();
-
-      const first = splitted[0] || "";
-      const second = splitted[1] || "";
-      let secondParts = second.split(" ");
-
-      if (secondParts.length >= 2) {
-        courseDates = first + " - " + secondParts[0] + " " + secondParts[1];
-        const remainderCourse = secondParts.slice(2).join(" ");
-        if (splitted.length === 3) {
-          course = remainderCourse + (splitted[2] ? " - " + splitted[2] : "");
-        } else {
-          course = remainderCourse;
-        }
-      } else {
-        courseDates = first + " - " + second;
-      }
-    } else if (splitted.length === 2) {
-      // e.g. ["May 24-25 Standard First Aid with CPR-C (SFA)", "TMU"]
-      location = splitted[1];
-
-      const re = /^([A-Za-z]+\s+\d+-\d+)(\s+.*)?$/;
-      const match = splitted[0].match(re);
-      if (match) {
-        // match[1] = "May 24-25"
-        // match[2] = " Standard First Aid with CPR-C (SFA)"
-        courseDates = match[1].trim();
-        const remainder = (match[2] || "").trim();
-        course = remainder;
-      } else {
-        course = splitted[0];
-      }
-    }
-    return { courseDates, course, location };
-  }
-
-  function getPolicyForCourse(daysUntilStart, policy) {
-    if (!policy) {
-      return { refund: "", reschedule: "" };
-    }
-    const refundPolicy = policy.refundPolicy;
-    const reschedulePolicy = policy.reschedulePolicy;
-    if (daysUntilStart > 5) {
-      return {
-        refund: refundPolicy["More than 5 days1*"],
-        reschedule: reschedulePolicy["More than 5 days1*"],
-      };
-    } else if (daysUntilStart <= 5 && daysUntilStart >= 3) {
-      return {
-        refund: refundPolicy["3-5 days1*"],
-        reschedule: reschedulePolicy["3-5 days1*"],
-      };
-    } else if (daysUntilStart < 3 && daysUntilStart >= 0) {
-      return {
-        refund: refundPolicy["2 days or less1*"],
-        reschedule: reschedulePolicy["2 days or less1*"],
-      };
-    } else {
-      return {
-        refund: refundPolicy["After course begins"],
-        reschedule: reschedulePolicy["After course begins"],
-      };
     }
   }
 
@@ -158,7 +162,6 @@ export default function DashboardPage() {
           console.error("Error fetching policy:", err.message)
         );
     };
-
     fetchPolicy();
     // Refresh the policy every 5 minutes
     const intervalId = setInterval(fetchPolicy, 300000);
@@ -172,7 +175,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!selectedAccount) return;
-
     axios
       .get(`/api/courseQuery?accountId=${selectedAccount.Id}`)
       .then((res) => {
@@ -195,11 +197,21 @@ export default function DashboardPage() {
       });
   }, [selectedAccount]);
 
+  // Find the Bronze Cross standard enrollment record (if available)
+  const bronzeCrossEnrollment = batches.find(
+    (en) =>
+      !en.isCombo &&
+      en.CourseName &&
+      en.CourseName.includes("Bronze Cross")
+  );
+
   return (
     <Layout accounts={accounts} onSelectAccount={handleSelect}>
       <div className="p-6">
-      {selectedAccount ? (
-          <h1 className="text-3xl font-semibold mb-6">{selectedAccount.Name}</h1>
+        {selectedAccount ? (
+          <h1 className="text-3xl font-semibold mb-6">
+            {selectedAccount.Name}
+          </h1>
         ) : (
           <h1 className="text-3xl font-semibold mb-6">
             Please select a student from the left panel
@@ -210,19 +222,54 @@ export default function DashboardPage() {
           <div className="flex-1 bg-white shadow p-6 rounded-lg">
             {selectedAccount ? (
               <div>
-                
                 {batches.length > 0 ? (
                   <div>
-                   
                     {batches.map((enr) => {
                       console.log("Debug each enrollment:", enr);
 
-                      const { courseDates, course, location } = parseCourseName(
-                        enr.CourseName
-                      );
-                      const policyData =
-                        policy &&
-                        getPolicyForCourse(enr.DaysUntilStart, policy);
+                      let displayedCourseName = "";
+                      let displayedDates = "";
+                      let displayedLocation = "";
+                      let displayedDaysUntilStart = enr.DaysUntilStart;
+
+                      if (enr.isCombo) {
+                        // For combo courses:
+                        if (
+                          enr.CourseName &&
+                          enr.CourseName.includes("Bronze Combo")
+                        ) {
+                          // Set default course name for combo
+                          displayedCourseName = "Bronze Combo";
+                          if (bronzeCrossEnrollment) {
+                            // Parse the classroom string for Bronze Cross using our helper
+                            const parsedClassroom = parseBronzeClassroom(
+                              bronzeCrossEnrollment.Classroom || ""
+                            );
+                            displayedDates = parsedClassroom.date;
+                            displayedLocation = parsedClassroom.location;
+                            displayedDaysUntilStart = bronzeCrossEnrollment.DaysUntilStart;
+                          } else {
+                            // Fallback: use the combo record values parsed via parseCourseName
+                            const parsed = parseCourseName(enr.CourseName || "");
+                            displayedDates = parsed.courseDates;
+                            displayedLocation = parsed.location;
+                          }
+                        } else {
+                          // For other combo enrollments, use the existing parser on Registration_Name__c
+                          const parsed = parseCourseName(enr.Registration_Name__c || "");
+                          displayedCourseName = parsed.course || "Untitled Course";
+                          displayedDates = parsed.courseDates;
+                          displayedLocation = parsed.location;
+                        }
+                      } else {
+                        // For standard enrollments, use parseCourseName on CourseName
+                        const { courseDates, course, location } = parseCourseName(enr.CourseName);
+                        displayedCourseName = course || "Untitled Course";
+                        displayedDates = courseDates || enr.CourseDates;
+                        displayedLocation = location || enr.Location;
+                      }
+
+                      const policyData = policy && getPolicyForCourse(displayedDaysUntilStart, policy);
 
                       return (
                         <div
@@ -230,102 +277,63 @@ export default function DashboardPage() {
                           className="card mb-4 p-4 border border-gray-300 rounded-md"
                         >
                           <div className="card-header">
-                            {/* Course Title in bold + #0070d9 */}
-                          <span className="text-[#0070d9] font-bold text-lg">
-                              {course || "Untitled Course"}
+                            <span className="text-[#0070d9] font-bold text-lg">
+                              {displayedCourseName}
                             </span>
                           </div>
                           <div className="card-body mt-3">
-                            {/* Single row for date, location, days, and links */}
                             <div className="flex items-center justify-between flex-wrap gap-6 mt-2">
-                              {/* Left side: Date/Location/Days */}
                               <div className="flex items-center gap-6">
-                                {/* Course Dates */}
                                 <div className="flex items-center">
                                   <span className="mr-2">📅</span>
-                                  {courseDates || enr.CourseDates}
+                                  {displayedDates}
                                 </div>
-                                {/* Location */}
                                 <div className="flex items-center">
                                   <span className="mr-2">📍 </span>
-                                  {location || enr.Location}
+                                  {displayedLocation}
                                 </div>
-                                {/* Days Until */}
                                 <div className="flex items-center">
                                   <span className="mr-2">⏰ </span>
-                                  {enr.DaysUntilStart < 0 ? (
+                                  {displayedDaysUntilStart < 0 ? (
                                     "Course has passed"
                                   ) : (
-                                    <span>{formatDays(enr.DaysUntilStart)}</span>
+                                    <span>{formatDays(displayedDaysUntilStart)}</span>
                                   )}
                                 </div>
                               </div>
-
-                              {/* Right side: Reschedule/Refund links (smaller font) */}
                               <div className="flex items-center gap-4 text-xs">
-                                {enr.DaysUntilStart >
+                                {displayedDaysUntilStart >
                                 (policy && policy.daysBeforeReschedule) ? (
                                   <>
                                     <a
                                       href="#"
                                       onClick={(e) => {
                                         e.preventDefault();
-                                        console.log(
-                                          "Manually building a new enrollments array for:",
-                                          enr.Id
-                                        );
-
-                                        let newEnrollments = [
-                                          ...selectedEnrollments,
-                                        ];
-                                        const existingIndex =
-                                          newEnrollments.findIndex(
-                                            (obj) => obj.Id === enr.Id
-                                          );
+                                        console.log("Manually building a new enrollments array for:", enr.Id);
+                                        let newEnrollments = [...selectedEnrollments];
+                                        const existingIndex = newEnrollments.findIndex((obj) => obj.Id === enr.Id);
                                         if (existingIndex !== -1) {
-                                          newEnrollments =
-                                            newEnrollments.filter(
-                                              (obj) => obj.Id !== enr.Id
-                                            );
+                                          newEnrollments = newEnrollments.filter((obj) => obj.Id !== enr.Id);
                                         } else {
                                           newEnrollments.push({ Id: enr.Id });
                                         }
-
                                         setSelectedEnrollments(newEnrollments);
 
-                                        const courseName =
-                                          course ||
-                                          enr.CourseName ||
-                                          "Unknown course";
-                                        console.log(
-                                          "Navigating to reschedule with updated enrollments:",
-                                          {
-                                            oldCourseName: courseName,
-                                            oldCourseId: enr.BatchId,
-                                            newEnrollments,
-                                          }
-                                        );
-
+                                        const courseName = displayedCourseName || enr.CourseName || "Unknown course";
+                                        console.log("Navigating to reschedule with updated enrollments:", {
+                                          oldCourseName: courseName,
+                                          oldCourseId: enr.BatchId,
+                                          newEnrollments,
+                                        });
                                         router.push(
-                                          `/reschedule?oldCourseName=${encodeURIComponent(
-                                            courseName
-                                          )}&oldCourseId=${
-                                            enr.BatchId
-                                          }&enrollmentId=${
-                                            enr.Id
-                                          }&enrollmentIds=${JSON.stringify(
-                                            newEnrollments
-                                          )}`
+                                          `/reschedule?oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.BatchId}&enrollmentId=${enr.Id}&enrollmentIds=${JSON.stringify(newEnrollments)}`
                                         );
                                       }}
                                       className="text-blue-500 underline"
                                     >
                                       Reschedule ({policyData?.reschedule})
                                     </a>
-                                    <a
-                                      href="#"
-                                      className="text-blue-500 underline"
-                                    >
+                                    <a href="#" className="text-blue-500 underline">
                                       Refund ({policyData?.refund})
                                     </a>
                                   </>
