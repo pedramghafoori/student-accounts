@@ -47,6 +47,7 @@ export async function GET(request) {
             Batch__r.Start_date_time__c,
             Batch__r.Product__r.Name
           FROM Course_Enrolments__r
+          WHERE Attendance_Status__c = 'Attending'
         )
       FROM Account
       WHERE Id = '${accountId}'
@@ -54,7 +55,7 @@ export async function GET(request) {
     console.log('[courseQuery] Running Account SOQL:', accountSoql);
     const accountResult = await conn.query(accountSoql);
 
-    // Query Registration__c for combo enrollments using the correct lookup field (AccountId)
+    // Query Registration for combo enrollments (using Opportunity as the registration object).
     const registrationSoql = `
       SELECT
         Id,
@@ -66,6 +67,7 @@ export async function GET(request) {
             Course_Start_Date_Time__c,
             Classroom__c
           FROM Combo_Course_Enrollment__r
+          WHERE Attendance_Status__c = 'Attending'
         )
       FROM Opportunity
       WHERE AccountId = '${accountId}'
@@ -74,8 +76,8 @@ export async function GET(request) {
     const registrationResult = await conn.query(registrationSoql);
     console.log('[courseQuery] Registration Query Result:', registrationResult.records);
 
-    let enrolments = [];
-    // Check if any Registration__c record has combo enrollments.
+    // Map combo enrollments from the Registration query
+    let comboEnrollments = [];
     if (registrationResult.records && registrationResult.records.length > 0) {
       for (const reg of registrationResult.records) {
         if (
@@ -83,7 +85,7 @@ export async function GET(request) {
           reg.Combo_Course_Enrollment__r.records &&
           reg.Combo_Course_Enrollment__r.records.length > 0
         ) {
-          enrolments = reg.Combo_Course_Enrollment__r.records.map((en) => {
+          const mappedCombo = reg.Combo_Course_Enrollment__r.records.map((en) => {
             const startDateTime = en.Course_Start_Date_Time__c;
             const daysUntilStart = startDateTime
               ? Math.ceil((new Date(startDateTime).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -93,25 +95,25 @@ export async function GET(request) {
               EnrolmentName: en.Name,
               BatchId: null,         // Combo enrollments may not have an associated Batch
               BatchLookup: null,
-              CourseName: reg.Name || en.Name,
+              CourseName: reg.Name || en.Name, // For combo, registration (Opportunity) Name is used.
               ProductName: null,     // Map a product field here if applicable
               DaysUntilStart: daysUntilStart,
               StartDateTime: startDateTime,
               Classroom: en.Classroom__c,
-              isCombo: true          // Optional flag to indicate combo enrollment
+              isCombo: true,
             };
           });
-          // If one registration record returns combo enrollments, we use them.
-          break;
+          comboEnrollments = comboEnrollments.concat(mappedCombo);
         }
       }
     }
 
-    // If no combo enrollments exist, fall back to standard enrollments from Account.
-    if (enrolments.length === 0 && accountResult.records && accountResult.records.length > 0) {
+    // Map standard enrollments from the Account query
+    let standardEnrollments = [];
+    if (accountResult.records && accountResult.records.length > 0) {
       const acc = accountResult.records[0];
       if (acc.Course_Enrolments__r && acc.Course_Enrolments__r.records) {
-        enrolments = acc.Course_Enrolments__r.records.map((en) => ({
+        standardEnrollments = acc.Course_Enrolments__r.records.map((en) => ({
           Id: en.Id,
           EnrolmentName: en.Name,
           BatchId: en.Batch__r?.Id,
@@ -120,16 +122,20 @@ export async function GET(request) {
           ProductName: en.Batch__r?.Product__r?.Name,
           DaysUntilStart: en.Batch__r?.Days_until_Start_Date__c,
           StartDateTime: en.Batch__r?.Start_date_time__c,
-          isCombo: false
+          isCombo: false,
         }));
       }
     }
+
+    // Merge combo and standard enrollments.
+    // If you want combo enrollments to take precedence, you may order them first.
+    const enrolments = [...comboEnrollments, ...standardEnrollments];
 
     // Transform the final record to a unified structure.
     const transformedRecords = accountResult.records.map((acc) => ({
       AccountId: acc.Id,
       AccountName: acc.Name,
-      Enrolments: enrolments
+      Enrolments: enrolments,
     }));
 
     return NextResponse.json({

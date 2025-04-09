@@ -10,9 +10,9 @@ import Layout from "@/components/Layout";
 function parseBronzeClassroom(classroomString = "") {
   const parts = classroomString.split(" ");
   if (parts.length >= 4) {
-    // Assume first two parts form the date, and the last part is location.
+    // Assume the first two parts form the date and the last part is the location.
     const datePart = parts.slice(0, 2).join(" "); // e.g., "April 12-13"
-    const locationPart = parts[parts.length - 1]; // e.g., "Harbord"
+    const locationPart = parts[parts.length - 1];   // e.g., "Harbord"
     return { date: datePart, location: locationPart };
   }
   return { date: classroomString, location: "" };
@@ -30,7 +30,6 @@ function parseCourseName(fullName = "") {
   let course = fullName;
 
   if (splitted.length >= 3) {
-    // e.g. ["May 24-25 Standard First Aid with CPR-C (SFA)", "TMU"]
     location = splitted[splitted.length - 1];
     splitted.pop();
     const first = splitted[0] || "";
@@ -48,7 +47,6 @@ function parseCourseName(fullName = "") {
       courseDates = first + " - " + second;
     }
   } else if (splitted.length === 2) {
-    // e.g. ["May 24-25 Standard First Aid with CPR-C (SFA)", "TMU"]
     location = splitted[1];
     const re = /^([A-Za-z]+\s+\d+-\d+)(\s+.*)?$/;
     const match = splitted[0].match(re);
@@ -238,10 +236,10 @@ export default function DashboardPage() {
                           enr.CourseName &&
                           enr.CourseName.includes("Bronze Combo")
                         ) {
-                          // Set default course name for combo
+                          // Set the course name to default "Bronze Combo"
                           displayedCourseName = "Bronze Combo";
                           if (bronzeCrossEnrollment) {
-                            // Parse the classroom string for Bronze Cross using our helper
+                            // Use the Bronze Cross enrollment's Classroom field.
                             const parsedClassroom = parseBronzeClassroom(
                               bronzeCrossEnrollment.Classroom || ""
                             );
@@ -249,13 +247,15 @@ export default function DashboardPage() {
                             displayedLocation = parsedClassroom.location;
                             displayedDaysUntilStart = bronzeCrossEnrollment.DaysUntilStart;
                           } else {
-                            // Fallback: use the combo record values parsed via parseCourseName
-                            const parsed = parseCourseName(enr.CourseName || "");
-                            displayedDates = parsed.courseDates;
-                            displayedLocation = parsed.location;
+                            // Fallback: Use the combo record's Classroom field directly.
+                            const parsedClassroom = parseBronzeClassroom(
+                              enr.Classroom || ""
+                            );
+                            displayedDates = parsedClassroom.date;
+                            displayedLocation = parsedClassroom.location;
                           }
                         } else {
-                          // For other combo enrollments, use the existing parser on Registration_Name__c
+                          // For other combo enrollments, parse using Registration_Name__c
                           const parsed = parseCourseName(enr.Registration_Name__c || "");
                           displayedCourseName = parsed.course || "Untitled Course";
                           displayedDates = parsed.courseDates;

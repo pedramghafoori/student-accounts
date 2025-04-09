@@ -7,7 +7,8 @@ export async function POST(request) {
     // 1) Parse request body
     const body = await request.json();
     console.log("[reschedule] Parsed body:", body);
-    const { oldCourseId, varNewCourseId, varSelectedEnrollments, varSelectedComboEnrollments } = body;
+    // Use varOldEnrollmentId and varNewCourseId from the request body
+    const { varOldEnrollmentId, varNewCourseId, varSelectedEnrollments, varSelectedComboEnrollments } = body;
     console.log("[reschedule] varSelectedEnrollments received:", varSelectedEnrollments);
     console.log("[reschedule] varSelectedComboEnrollments received:", varSelectedComboEnrollments);
 
@@ -19,7 +20,10 @@ export async function POST(request) {
     if (!varNewCourseId) {
       return NextResponse.json({ success: false, message: "Missing varNewCourseId." }, { status: 400 });
     }
-    console.log("[reschedule] varNewCourseId is present, proceeding...");
+    if (!varOldEnrollmentId) {
+      return NextResponse.json({ success: false, message: "Missing varOldEnrollmentId." }, { status: 400 });
+    }
+    console.log("[reschedule] varNewCourseId and varOldEnrollmentId are present, proceeding...");
 
     // 2) Retrieve tokens (Access Token, Instance URL) from Redis
     const { accessToken, refreshToken, instanceUrl } = await getSystemTokensFromRedis();
@@ -32,23 +36,23 @@ export async function POST(request) {
     console.log("[reschedule] Retrieved tokens from Redis:", { accessToken: accessToken?.slice(0, 6), instanceUrl });
 
     // 3) Build the Flow REST API URL
-    // This example uses the v57.0 endpoint for Autolaunched Flows
-    // Replace `Auto_Course_Change_Classroom` with your flow’s actual API Name
+    // This example uses the v63.0 endpoint for Autolaunched Flows
+    // Replace 'Auto_Rescheduling' with your flow’s actual API Name
     const flowApiName = "Auto_Rescheduling";
     const flowUrl = `${instanceUrl}/services/data/v63.0/actions/custom/flow/${flowApiName}`;
 
     // 4) Construct the request payload to pass into the flow
     // NOTE: The variable names must match exactly the ones in your flow.
-    console.log("[reschedule] Building flowPayload with:", { oldCourseId, varNewCourseId, varSelectedEnrollments, varSelectedComboEnrollments });
+    console.log("[reschedule] Building flowPayload with:", { varOldEnrollmentId, varNewCourseId, varSelectedEnrollments, varSelectedComboEnrollments });
     const flowPayload = {
       inputs: [
         {
-            // For example, if your flow has `recordId` for the old course:
-            recordId: oldCourseId,
-            varNewCourseId,        // The new course ID
-            varSelectedEnrollments: varSelectedEnrollments || [],
-            varSelectedComboEnrollments: varSelectedComboEnrollments || []
-          }
+          // Use varOldEnrollmentId as the recordId for the old enrollment
+          recordId: varOldEnrollmentId,
+          varNewCourseId,        // The new course ID
+          varSelectedEnrollments: varSelectedEnrollments || [],
+          varSelectedComboEnrollments: varSelectedComboEnrollments || []
+        }
       ]
     };
 
