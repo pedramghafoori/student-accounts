@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import axios from "axios";
 
-export default function LoginPage() {
+// This component contains all the login logic and uses the useSearchParams hook
+function LoginContent() {
   // Read query parameters for a logout reason
   const searchParams = useSearchParams();
   const reason = searchParams.get("reason"); // e.g., 'inactive'
@@ -183,7 +183,7 @@ export default function LoginPage() {
             </button>
 
             <p className="text-center text-sm text-gray-500">
-              Or{" "}
+              Or{` `}
               <button
                 type="button"
                 onClick={handleSendOtp}
@@ -224,7 +224,7 @@ export default function LoginPage() {
               onClick={handleVerifyOtp}
               className="w-full py-2 text-sm font-medium text-white bg-blue-800 rounded hover:bg-blue-900 transition-colors"
             >
-              Verify &amp; Login
+              Verify & Login
             </button>
           </div>
 
@@ -241,5 +241,15 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// The default export wraps the LoginContent component in a Suspense boundary,
+// which is required for components using useSearchParams to handle asynchronous rendering gracefully.
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
