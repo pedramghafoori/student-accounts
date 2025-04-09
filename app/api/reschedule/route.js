@@ -38,20 +38,17 @@ export async function POST(request) {
     // 3) Build the Flow REST API URL
     // This example uses the v63.0 endpoint for Autolaunched Flows
     // Replace 'Auto_Rescheduling' with your flow’s actual API Name
-    const flowApiName = "Auto_Rescheduling";
+    const flowApiName = "Auto_Rescheduling_3";
     const flowUrl = `${instanceUrl}/services/data/v63.0/actions/custom/flow/${flowApiName}`;
 
     // 4) Construct the request payload to pass into the flow
     // NOTE: The variable names must match exactly the ones in your flow.
-    console.log("[reschedule] Building flowPayload with:", { varOldEnrollmentId, varNewCourseId, varSelectedEnrollments, varSelectedComboEnrollments });
+    console.log("[reschedule] Building flowPayload with:", { varOldEnrollmentId, varNewCourseId});
     const flowPayload = {
       inputs: [
         {
-          // Use varOldEnrollmentId as the recordId for the old enrollment
-          recordId: varOldEnrollmentId,
-          varNewCourseId,        // The new course ID
-          varSelectedEnrollments: varSelectedEnrollments || [],
-          varSelectedComboEnrollments: varSelectedComboEnrollments || []
+          varOldEnrollmentId,
+          varNewCourseId
         }
       ]
     };

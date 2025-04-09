@@ -5,30 +5,14 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import Layout from "@/components/Layout";
 
-// Helper: Parse a classroom string in the format "April 12-13 Bronze Harbord"
-// into an object with date and location.
-function parseBronzeClassroom(classroomString = "") {
-  const parts = classroomString.split(" ");
-  if (parts.length >= 4) {
-    // Assume the first two parts form the date and the last part is the location.
-    const datePart = parts.slice(0, 2).join(" "); // e.g., "April 12-13"
-    const locationPart = parts[parts.length - 1];   // e.g., "Harbord"
-    return { date: datePart, location: locationPart };
-  }
-  return { date: classroomString, location: "" };
-}
-
-/**
- * Parses a course name in the format:
- * "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
- * Returns an object with courseDates, course, and location.
- */
+// Helper function: Parse a course name in the format:
+// "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
+// Returns an object with courseDates, course, and location.
 function parseCourseName(fullName = "") {
   let splitted = fullName.split(" - ");
   let location = "";
   let courseDates = "";
   let course = fullName;
-
   if (splitted.length >= 3) {
     location = splitted[splitted.length - 1];
     splitted.pop();
@@ -59,6 +43,19 @@ function parseCourseName(fullName = "") {
     }
   }
   return { courseDates, course, location };
+}
+
+// Helper function: Parse a classroom string formatted like "April 12-13 Bronze Harbord"
+// Returns an object with the date and location.
+function parseBronzeClassroom(classroomString = "") {
+  const parts = classroomString.split(" ");
+  if (parts.length >= 4) {
+    // Assume that the first two parts form the date and the last part is the location.
+    const datePart = parts.slice(0, 2).join(" "); // e.g., "April 12-13"
+    const locationPart = parts[parts.length - 1];   // e.g., "Harbord"
+    return { date: datePart, location: locationPart };
+  }
+  return { date: classroomString, location: "" };
 }
 
 function getPolicyForCourse(daysUntilStart, policy) {
@@ -97,6 +94,7 @@ export default function DashboardPage() {
   const [policy, setPolicy] = useState(null);
   const [error, setError] = useState("");
   const [selectedEnrollments, setSelectedEnrollments] = useState([]);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const router = useRouter();
 
@@ -115,7 +113,6 @@ export default function DashboardPage() {
   function formatDays(days) {
     const weeks = Math.floor(days / 7);
     const remainder = days % 7;
-
     if (weeks > 0 && remainder > 0) {
       return `Starts in ${weeks} weeks, ${remainder} days`;
     } else if (weeks > 0) {
@@ -160,8 +157,8 @@ export default function DashboardPage() {
           console.error("Error fetching policy:", err.message)
         );
     };
+
     fetchPolicy();
-    // Refresh the policy every 5 minutes
     const intervalId = setInterval(fetchPolicy, 300000);
     return () => clearInterval(intervalId);
   }, []);
@@ -190,7 +187,11 @@ export default function DashboardPage() {
         }
       })
       .catch((err) => {
-        setError(err.message);
+        if (err.response && err.response.status === 401) {
+          setSessionExpired(true);
+        } else {
+          setError(err.message);
+        }
         setBatches([]);
       });
   }, [selectedAccount]);
@@ -216,6 +217,7 @@ export default function DashboardPage() {
           </h1>
         )}
         {error && <p className="text-red-600 mb-4">{error}</p>}
+
         <div className="flex">
           <div className="flex-1 bg-white shadow p-6 rounded-lg">
             {selectedAccount ? (
@@ -224,38 +226,33 @@ export default function DashboardPage() {
                   <div>
                     {batches.map((enr) => {
                       console.log("Debug each enrollment:", enr);
-
                       let displayedCourseName = "";
                       let displayedDates = "";
                       let displayedLocation = "";
                       let displayedDaysUntilStart = enr.DaysUntilStart;
 
                       if (enr.isCombo) {
-                        // For combo courses:
+                        // For Bronze Combo, if the CourseName contains "Bronze Combo"
                         if (
                           enr.CourseName &&
                           enr.CourseName.includes("Bronze Combo")
                         ) {
-                          // Set the course name to default "Bronze Combo"
                           displayedCourseName = "Bronze Combo";
                           if (bronzeCrossEnrollment) {
-                            // Use the Bronze Cross enrollment's Classroom field.
-                            const parsedClassroom = parseBronzeClassroom(
-                              bronzeCrossEnrollment.Classroom || ""
-                            );
-                            displayedDates = parsedClassroom.date;
-                            displayedLocation = parsedClassroom.location;
+                            // Use the Bronze Cross record's Classroom field to parse dates and location
+                            const parsed = parseBronzeClassroom(bronzeCrossEnrollment.Classroom || "");
+                            // Expect parsed.date to be "April 12-13" and parsed.location to be "Harbord"
+                            displayedDates = parsed.date;
+                            displayedLocation = parsed.location;
                             displayedDaysUntilStart = bronzeCrossEnrollment.DaysUntilStart;
                           } else {
-                            // Fallback: Use the combo record's Classroom field directly.
-                            const parsedClassroom = parseBronzeClassroom(
-                              enr.Classroom || ""
-                            );
-                            displayedDates = parsedClassroom.date;
-                            displayedLocation = parsedClassroom.location;
+                            // Fallback: parse the combo enrollment's own Classroom field
+                            const parsed = parseBronzeClassroom(enr.Classroom || "");
+                            displayedDates = parsed.date;
+                            displayedLocation = parsed.location;
                           }
                         } else {
-                          // For other combo enrollments, parse using Registration_Name__c
+                          // For other combo enrollments, use default parser on Registration_Name__c
                           const parsed = parseCourseName(enr.Registration_Name__c || "");
                           displayedCourseName = parsed.course || "Untitled Course";
                           displayedDates = parsed.courseDates;
@@ -368,6 +365,19 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      {sessionExpired && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-md shadow-md">
+            <p className="mb-4 text-lg text-center">Your session has expired. Please log in again.</p>
+            <button
+              onClick={() => router.push("/login")}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Login Again
+            </button>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

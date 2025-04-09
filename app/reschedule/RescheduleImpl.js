@@ -7,9 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import axios from "axios";
 
 function parseDateFromCourseName(fullName = "") {
-  // e.g. "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
-  // We want to extract "May 24-25" from the front.
-  const match = fullName.match(/^([A-Za-z]+\s+\d+-\d+)/);
+  const match = fullName.match(/^([A-Za-z]+\s+\d{1,2}\s*-\s*(?:[A-Za-z]+\s+)?\d{1,2})/);
   if (match) {
     return match[1];
   }
@@ -29,10 +27,10 @@ export function RescheduleImpl() {
   const searchParams = useSearchParams();
   const oldCourseName = searchParams.get("oldCourseName") || "";
   const oldCourseId = searchParams.get("oldCourseId");
-
   const enrollmentId = searchParams.get("enrollmentId");
+  const oldCourseLocation = searchParams.get("oldCourseLocation");
+  const oldCourseStartDate = searchParams.get("oldCourseStartDate");
 
-  // Parse enrollmentIds (array of objects)
   const enrollmentIdsParam = searchParams.get("enrollmentIds");
   let parsedEnrollmentIds = [];
   if (enrollmentIdsParam) {
@@ -49,7 +47,6 @@ export function RescheduleImpl() {
       setError("Course type not provided in URL.");
       return;
     }
-
     async function fetchFutureCourses() {
       try {
         setLoading(true);
@@ -74,7 +71,6 @@ export function RescheduleImpl() {
     fetchFutureCourses();
   }, [oldCourseName]);
 
-  // Grab unique locations from the fetched courses
   const uniqueLocations = useMemo(() => {
     const locsSet = new Set();
     futureCourses.forEach((course) => {
@@ -86,7 +82,6 @@ export function RescheduleImpl() {
     return Array.from(locsSet).map((loc) => ({ id: loc, name: loc }));
   }, [futureCourses]);
 
-  // Filter courses by selected location
   const filteredCourses = useMemo(() => {
     if (selectedLocations.length === 0) {
       return futureCourses;
@@ -113,7 +108,6 @@ export function RescheduleImpl() {
     }
   }
 
-  // Calculate days until course start date
   function getDaysUntil(startDate) {
     const start = new Date(startDate);
     const today = new Date();
@@ -123,18 +117,16 @@ export function RescheduleImpl() {
 
   async function handleConfirm() {
     const payload = {
-      recordId: enrollmentId,
+      varOldEnrollmentId: enrollmentId,
       varNewCourseId: selectedNewCourse?.Id,
       varSelectedEnrollments: parsedEnrollmentIds,
       singleEnrollmentId: enrollmentId,
     };
-
     console.log("[ReschedulePage] handleConfirm payload:", payload);
-
     try {
       console.log("Sending reschedule request:", payload);
       await axios.post("/api/reschedule", payload);
-      router.push("/dashboard");
+      setStep(3);
     } catch (err) {
       console.error("Error rescheduling:", err);
       setError(err?.response?.data?.message || "Error rescheduling course.");
@@ -153,9 +145,35 @@ export function RescheduleImpl() {
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
-      {/* Step 1: Choose Future Course */}
       {step === 1 && (
         <>
+          {/* Current Course Card */}
+          <div className="mb-6 p-4 border-2 border-blue-600 bg-blue-50 rounded-lg shadow-xl">
+            <h2 className="text-xl font-bold text-blue-800">Current Course</h2>
+            <p className="mt-2 text-lg">
+              {oldCourseName || "No current course available"}
+            </p>
+            <div className="flex items-center gap-6 mt-2 text-gray-600">
+              <div className="flex items-center">
+                <span className="mr-2">📍</span>
+                {oldCourseLocation || "Location N/A"}
+              </div>
+              <div className="flex items-center">
+                <span className="mr-2">⏰</span>
+                {oldCourseStartDate ? (
+                  getDaysUntil(oldCourseStartDate) < 0 ? (
+                    <span className="text-red-500">Course has passed</span>
+                  ) : (
+                    <span>Days Until: {getDaysUntil(oldCourseStartDate)}</span>
+                  )
+                ) : (
+                  "Start date N/A"
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Future Courses Section */}
           <h1 className="text-2xl mb-4">
             Reschedule Your Course: {oldCourseName || "Unknown"}
           </h1>
@@ -189,7 +207,7 @@ export function RescheduleImpl() {
 
           <div className="space-y-4 max-h-72 overflow-y-auto border border-gray-200 p-4 rounded">
             {filteredCourses.map((course) => {
-              const hasPassed = course.DaysUntilStart < 0; // or compute from data if available
+              const hasPassed = course.DaysUntilStart < 0;
               return (
                 <div
                   key={course.Id}
@@ -200,38 +218,25 @@ export function RescheduleImpl() {
                       : "border-gray-300 bg-white"
                   }`}
                 >
-                  {/* Card Header */}
                   <div className="card-header">
                     <span className="text-[#0070d9] text-lg">
                       {parseDateFromCourseName(course.Name || "Untitled Course")}
                     </span>
                   </div>
-                  {/* Card Body (icons) */}
                   <div className="card-body mt-0">
                     <div className="flex items-center justify-between gap-6 mt-2 text-gray-600 h-auto">
                       <div className="flex items-center gap-6">
-                        {/*
-                        <div className="flex items-center">
-                          <span className="mr-2">📅</span>
-                          {course.Start_date_time__c}
-                        </div>
-                        */}
-                        {/* Location */}
                         <div className="flex items-center">
                           <span className="mr-2">📍</span>
                           {course.Location__r?.Name || course.Location__c}
                         </div>
-                        {/* Days Until or Course Passed */}
                         <div className="flex items-center">
                           <span className="mr-2">⏰</span>
                           {hasPassed ? (
-                            <span className="text-red-500">
-                              Course has passed
-                            </span>
+                            <span className="text-red-500">Course has passed</span>
                           ) : (
                             <span>
-                              Days Until:{" "}
-                              {getDaysUntil(course.Start_date_time__c)}
+                              Days Until: {getDaysUntil(course.Start_date_time__c)}
                             </span>
                           )}
                         </div>
@@ -262,7 +267,6 @@ export function RescheduleImpl() {
         </>
       )}
 
-      {/* Step 2: Confirm Reschedule */}
       {step === 2 && (
         <>
           <h1 className="text-2xl font-bold mb-4">Confirm Reschedule</h1>
@@ -297,6 +301,38 @@ export function RescheduleImpl() {
             </button>
           </div>
         </>
+      )}
+
+      {step === 3 && (
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Reschedule Confirmed</h1>
+          <p className="mb-4">Your enrollment has been rescheduled to:</p>
+          <div className="p-4 border border-blue-500 rounded">
+            <h2 className="text-xl font-bold">{selectedNewCourse?.Name}</h2>
+            <p>
+              <span>📍 </span>
+              {selectedNewCourse?.Location__r?.Name || selectedNewCourse?.Location__c || "Location N/A"}
+            </p>
+            <p>
+              <span>⏰ </span>
+              {selectedNewCourse?.Start_date_time__c ? (
+                getDaysUntil(selectedNewCourse.Start_date_time__c) < 0 ? (
+                  <span className="text-red-500">Course has passed</span>
+                ) : (
+                  `Days Until: ${getDaysUntil(selectedNewCourse.Start_date_time__c)}`
+                )
+              ) : (
+                "Start date N/A"
+              )}
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Go to Dashboard
+          </button>
+        </div>
       )}
     </div>
   );
