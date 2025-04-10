@@ -17,7 +17,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
         <Link
           href="/dashboard"
           className={`footer-menu-item ${
-            isActive("/dashboard") ? "border-2 border-blue-500 rounded-full p-2" : ""
+            isActive("/dashboard") ? "border-1 border-blue-500 rounded-full p-2" : ""
           }`}
         >
           <svg
@@ -41,7 +41,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
               10.5l-9-5.25-9 5.25"
             />
           </svg>
-          <span className="footer-menu-label">Dashboard</span>
+          <span className="footer-menu-label">Courses</span>
         </Link>
 
         {/* Accounts */}
@@ -52,19 +52,15 @@ export default function FooterMenu({ allUserAccounts = [] }) {
         >
           <Link href="/myinfo" className="flex flex-col items-center">
             <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="footer-menu-icon"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth="2"
-              stroke="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+            className="footer-menu-icon"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="2"
+            stroke="currentColor"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5.121 17.804A9 9 0 1119 8.999m-2.1 
-                   5.1A5 5 0 1012 7.999"
-              />
+            <circle cx="12" cy="7" r="5" />
+            <path d="M4 22c1-7 6-10 8-10s7 3 8 10" />
             </svg>
             <span className="footer-menu-label">My Info</span>
           </Link>
@@ -91,21 +87,22 @@ export default function FooterMenu({ allUserAccounts = [] }) {
           }`}
         >
           <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="footer-menu-icon"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="2"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M17 9V7a2 2 0 00-2-2H7a2 2 
-                0 00-2 2v10a2 2 0 002 2h8a2 2 
-                0 002-2v-2m-5-5l10-10M12 14l9-9"
-            />
-          </svg>
+  xmlns="http://www.w3.org/2000/svg"
+  className="footer-menu-icon"
+  fill="none"
+  viewBox="0 0 29 24"   // <- wider canvas
+  stroke="currentColor"
+  strokeWidth="2"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+>
+  <rect x="1" y="4" width="27" height="17" rx="2" ry="2" />
+  <line x1="1" y1="8" x2="26" y2="8" />
+  <line x1="4" y1="13" x2="15" y2="13" />
+  <line x1="20" y1="13" x2="25" y2="13" />
+  <line x1="4" y1="17" x2="14" y2="17" />
+
+</svg>
           <span className="footer-menu-label">Transactions</span>
         </Link>
       </div>
