@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { AppContext } from "../context/appcontext";
 
 /** Helper #1: parse a course name in the format:
  *   "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
@@ -114,7 +115,6 @@ export default function DashboardPage() {
   const [policy, setPolicy] = useState(null);
   const [error, setError] = useState("");
   const [sessionExpired, setSessionExpired] = useState(false);
-
   // For multi-course operations (reschedule, etc.)
   const [selectedEnrollments, setSelectedEnrollments] = useState([]);
 
@@ -225,7 +225,7 @@ export default function DashboardPage() {
         >
           {/* LEFT: portal title + selected account’s name */}
           <div>
-            <h1 className="text-2xlg font-bold">Student Portal</h1>
+            <h1 className="text-lg font-bold">Student Portal</h1>
             {selectedAccount && (
               <p className="text-lg font-semibold">{selectedAccount.Name}</p>
             )}
