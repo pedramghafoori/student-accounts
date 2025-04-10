@@ -1,4 +1,3 @@
-// /app/api/transactions/stripe/route.js
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
@@ -22,6 +21,7 @@ export async function GET(request) {
       paymentIntent = await stripe.paymentIntents.retrieve(reference, {
         expand: ['charges'],
       });
+      console.log("[Stripe route] Retrieved paymentIntent:", paymentIntent);
     } catch (err) {
       return NextResponse.json(
         {
@@ -49,6 +49,12 @@ export async function GET(request) {
       const charge = paymentIntent.charges.data[0];
       receiptUrl = charge.receipt_url;
     }
+
+    console.log("[Stripe route] returning:", {
+      success: true,
+      reference,
+      receiptUrl,
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,8 @@
 "use client";
 import React from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
+
 
 export default function FooterMenu({ allUserAccounts = [] }) {
   const pathname = usePathname();
@@ -12,7 +14,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
     <nav className="footer-nav">
       <div className="footer-nav-items">
         {/* Dashboard */}
-        <a
+        <Link
           href="/dashboard"
           className={`footer-menu-item ${
             isActive("/dashboard") ? "border-2 border-blue-500 rounded-full p-2" : ""
@@ -40,7 +42,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
             />
           </svg>
           <span className="footer-menu-label">Dashboard</span>
-        </a>
+        </Link>
 
         {/* Accounts */}
         <div
@@ -48,7 +50,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
             isActive("/accounts") ? "border-2 border-blue-500 rounded-full p-2" : ""
           }`}
         >
-          <a href="/myinfo" className="flex flex-col items-center">
+          <Link href="/myinfo" className="flex flex-col items-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="footer-menu-icon"
@@ -65,7 +67,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
               />
             </svg>
             <span className="footer-menu-label">My Info</span>
-          </a>
+          </Link>
           {/* Hover dropdown content */}
           <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white text-black border border-gray-200 shadow-lg rounded p-2 w-48">
             <p className="text-xs text-gray-500 mb-2">Switch Account:</p>
@@ -82,7 +84,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
         </div>
 
         {/* Transactions */}
-        <a
+        <Link
           href="/transactions"
           className={`footer-menu-item ${
             isActive("/transactions") ? "border-2 border-blue-500 rounded-full p-2" : ""
@@ -105,7 +107,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
             />
           </svg>
           <span className="footer-menu-label">Transactions</span>
-        </a>
+        </Link>
       </div>
     </nav>
   );

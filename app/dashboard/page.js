@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { AppContext } from "../context/appcontext";
@@ -117,6 +117,7 @@ export default function DashboardPage() {
   const [sessionExpired, setSessionExpired] = useState(false);
   // For multi-course operations (reschedule, etc.)
   const [selectedEnrollments, setSelectedEnrollments] = useState([]);
+  const { updateGlobalSelectedAccount } = useContext(AppContext);
 
   /** 1) Fetch the accounts on mount */
   useEffect(() => {
@@ -154,6 +155,7 @@ export default function DashboardPage() {
   function handleSelect(accountId) {
     const found = accounts.find((a) => a.Id === accountId);
     setSelectedAccount(found || null);
+    updateGlobalSelectedAccount(found || null);
   }
 
   /** 4) If the user picked an account, fetch its course enrollments */

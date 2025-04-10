@@ -36,7 +36,7 @@ export async function GET(request) {
     const soql = `
       SELECT
         Id,
-        Name,                  /*  Registration Name (Opportunity.Name)          */
+        Name,
         Registration_Number__c,
         CloseDate,
         Course_Amount__c,
