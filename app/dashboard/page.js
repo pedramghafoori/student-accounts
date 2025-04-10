@@ -275,31 +275,39 @@ export default function DashboardPage() {
       
       {showAccountDropdown && (
         <div
-          className="absolute right-4 top-24 p-4 border rounded bg-white text-black w-48"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
           style={{ zIndex: 999 }}
+          onClick={(e) => {
+            // If the click target is the backdrop itself, close the dropdown.
+            if (e.target === e.currentTarget) {
+              setShowAccountDropdown(false);
+            }
+          }}
         >
-          <h2 className="text-xl font-bold mb-2 text-center">Accounts</h2>
-          <div className="overflow-y-auto max-h-64">
-            {accounts.map((acc) => (
-              <div
-                key={acc.Id}
-                onClick={() => {
-                  handleSelect(acc.Id);
-                  setShowAccountDropdown(false);
-                }}
-                className="border rounded-lg p-2 mb-2 cursor-pointer hover:bg-blue-50"
+          <div className="p-6 border rounded bg-white text-black w-96">
+            <h2 className="text-xl font-bold mb-2 text-center">Accounts</h2>
+            <div className="overflow-y-auto max-h-64">
+              {accounts.map((acc) => (
+                <div
+                  key={acc.Id}
+                  onClick={() => {
+                    handleSelect(acc.Id);
+                    setShowAccountDropdown(false);
+                  }}
+                  className="border rounded-lg p-2 mb-2 cursor-pointer hover:bg-blue-50"
+                >
+                  <h2 className="text-lg">{acc.Name}</h2>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 border-t pt-2 text-center">
+              <button
+                onClick={handleLogout}
+                className="text-sm text-blue-500 hover:underline"
               >
-                <h2 className="text-lg">{acc.Name}</h2>
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 border-t pt-2 text-center">
-            <button
-              onClick={handleLogout}
-              className="text-sm text-blue-500 hover:underline"
-            >
-              Logout
-            </button>
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       )}

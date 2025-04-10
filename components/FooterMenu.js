@@ -11,7 +11,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
   return (
     <nav className="footer-nav">
       <div className="footer-nav-items">
-        {/* Courses => Dashboard */}
+        {/* Dashboard */}
         <a
           href="/dashboard"
           className={`footer-menu-item ${
@@ -39,14 +39,16 @@ export default function FooterMenu({ allUserAccounts = [] }) {
               10.5l-9-5.25-9 5.25"
             />
           </svg>
-          <span className="footer-menu-label">Courses</span>
+          <span className="footer-menu-label">Dashboard</span>
         </a>
 
         {/* Accounts */}
-        <div className={`footer-menu-item footer-dropdown relative group ${
-          isActive("/accounts") ? "border-2 border-blue-500 rounded-full p-2" : ""
-        }`}>
-          <a href="/accounts" className="flex flex-col items-center">
+        <div
+          className={`footer-menu-item footer-dropdown relative group ${
+            isActive("/accounts") ? "border-2 border-blue-500 rounded-full p-2" : ""
+          }`}
+        >
+          <a href="/myinfo" className="flex flex-col items-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="footer-menu-icon"
