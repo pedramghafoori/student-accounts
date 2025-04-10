@@ -225,7 +225,7 @@ export default function DashboardPage() {
         >
           {/* LEFT: portal title + selected account’s name */}
           <div>
-            <h1 className="text-2xl font-bold">Student Portal</h1>
+            <h1 className="text-2xlg font-bold">Student Portal</h1>
             {selectedAccount && (
               <p className="text-lg font-semibold">{selectedAccount.Name}</p>
             )}
@@ -488,12 +488,12 @@ export default function DashboardPage() {
               </>
             ) : (
               <p className="text-gray-700">
-                No course batches found for this account.
+                No course found for this student.
               </p>
             )
           ) : (
             <p className="text-gray-700">
-              Please select an account to view details.
+              Please select a student to view past and upcoming courses.
             </p>
           )}
         </div>
