@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import Layout from "@/components/Layout";
 
-// Helper function: Parse a course name in the format:
-// "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
-// Returns an object with courseDates, course, and location.
+/** Helper #1: parse a course name in the format:
+ *   "May 24-25 Standard First Aid with CPR-C (SFA) - TMU"
+ */
 function parseCourseName(fullName = "") {
   let splitted = fullName.split(" - ");
   let location = "";
@@ -45,25 +44,27 @@ function parseCourseName(fullName = "") {
   return { courseDates, course, location };
 }
 
-// Helper function: Parse a classroom string formatted like "April 12-13 Bronze Harbord"
-// Returns an object with the date and location.
+/** Helper #2: parse a string like "April 12-13 Bronze Harbord"
+ * returning { date, location }, used for certain combos
+ */
 function parseBronzeClassroom(classroomString = "") {
   const parts = classroomString.split(" ");
   if (parts.length >= 4) {
-    // Assume that the first two parts form the date and the last part is the location.
-    const datePart = parts.slice(0, 2).join(" "); // e.g., "April 12-13"
-    const locationPart = parts[parts.length - 1];   // e.g., "Harbord"
+    const datePart = parts.slice(0, 2).join(" ");
+    const locationPart = parts[parts.length - 1];
     return { date: datePart, location: locationPart };
   }
   return { date: classroomString, location: "" };
 }
 
+/** Helper #3: get the policy strings for refund/reschedule
+ * based on daysUntilStart + the given policy object
+ */
 function getPolicyForCourse(daysUntilStart, policy) {
   if (!policy) {
     return { refund: "", reschedule: "" };
   }
-  const refundPolicy = policy.refundPolicy;
-  const reschedulePolicy = policy.reschedulePolicy;
+  const { refundPolicy, reschedulePolicy } = policy;
   if (daysUntilStart > 5) {
     return {
       refund: refundPolicy["More than 5 days1*"],
@@ -87,19 +88,108 @@ function getPolicyForCourse(daysUntilStart, policy) {
   }
 }
 
+/** Helper #4: format days into a user-friendly string */
+function formatDays(days) {
+  const weeks = Math.floor(days / 7);
+  const remainder = days % 7;
+  if (weeks > 0 && remainder > 0) {
+    return `Starts in ${weeks} weeks, ${remainder} days`;
+  } else if (weeks > 0) {
+    return `Starts in ${weeks} weeks`;
+  } else {
+    return `Starts in ${days} days`;
+  }
+}
+
 export default function DashboardPage() {
+  const router = useRouter();
+
+  // Basic local states for accounts + selection
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+
+  // Batches/courses, policy, errors, session expiry
   const [batches, setBatches] = useState([]);
   const [policy, setPolicy] = useState(null);
   const [error, setError] = useState("");
-  const [selectedEnrollments, setSelectedEnrollments] = useState([]);
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  const router = useRouter();
+  // For multi-course operations (reschedule, etc.)
+  const [selectedEnrollments, setSelectedEnrollments] = useState([]);
 
+  /** 1) Fetch the accounts on mount */
+  useEffect(() => {
+    axios
+      .get("/api/salesforce")
+      .then((res) => {
+        if (res.data.success) {
+          if (res.data.account) {
+            setAccounts([res.data.account]);
+          } else if (res.data.accounts) {
+            setAccounts(res.data.accounts);
+          }
+        } else {
+          setError(res.data.message || "Error fetching accounts");
+        }
+      })
+      .catch((err) => setError(err.message));
+  }, []);
+
+  /** 2) If we want the policy info */
+  useEffect(() => {
+    axios
+      .get("/api/refund-policy")
+      .then((res) => {
+        if (res.data.success) {
+          setPolicy(res.data.policy);
+        } else {
+          console.error("Error fetching policy:", res.data.message);
+        }
+      })
+      .catch((err) => console.error("Error fetching policy:", err.message));
+  }, []);
+
+  /** 3) On select an account, setSelectedAccount */
+  function handleSelect(accountId) {
+    const found = accounts.find((a) => a.Id === accountId);
+    setSelectedAccount(found || null);
+  }
+
+  /** 4) If the user picked an account, fetch its course enrollments */
+  useEffect(() => {
+    if (!selectedAccount) {
+      setBatches([]);
+      return;
+    }
+    axios
+      .get(`/api/courseQuery?accountId=${selectedAccount.Id}`)
+      .then((res) => {
+        if (res.data.success) {
+          if (res.data.records?.length > 0) {
+            const record = res.data.records[0];
+            setBatches(record.Enrolments || []);
+          } else {
+            setBatches([]);
+            setError(res.data.message || "No course batches found");
+          }
+        } else {
+          setError(res.data.message || "Error fetching batch info");
+          setBatches([]);
+        }
+      })
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          setSessionExpired(true);
+        } else {
+          setError(err.message);
+        }
+        setBatches([]);
+      });
+  }, [selectedAccount]);
+
+  /** 5) For toggling enrollment selection (reschedule, etc.) */
   function handleToggleEnrollment(id) {
-    console.log("Toggling enrollment", id);
     setSelectedEnrollments((prev) => {
       const existingIndex = prev.findIndex((obj) => obj.Id === id);
       if (existingIndex !== -1) {
@@ -110,93 +200,14 @@ export default function DashboardPage() {
     });
   }
 
-  function formatDays(days) {
-    const weeks = Math.floor(days / 7);
-    const remainder = days % 7;
-    if (weeks > 0 && remainder > 0) {
-      return `Starts in ${weeks} weeks, ${remainder} days`;
-    } else if (weeks > 0) {
-      return `Starts in ${weeks} weeks`;
-    } else {
-      return `Starts in ${days} days`;
-    }
+  /** 6) If you need a logout, define it here */
+  function handleLogout() {
+    // Example: remove cookie, redirect to login, etc.
+    document.cookie = "userToken=; path=/; max-age=0;";
+    router.push("/login");
   }
 
-  useEffect(() => {
-    axios
-      .get("/api/salesforce")
-      .then((res) => {
-        if (res.data.success) {
-          if (res.data.account) {
-            setAccounts([res.data.account]);
-          } else if (res.data.accounts) {
-            setAccounts(res.data.accounts);
-          } else {
-            setAccounts([]);
-          }
-        } else {
-          setError(res.data.message || "Error fetching accounts");
-        }
-      })
-      .catch((err) => setError(err.message));
-  }, []);
-
-  useEffect(() => {
-    const fetchPolicy = () => {
-      axios
-        .get("/api/refund-policy")
-        .then((res) => {
-          console.log("Refund policy response:", res.data);
-          if (res.data.success) {
-            setPolicy(res.data.policy);
-          } else {
-            console.error("Error fetching policy:", res.data.message);
-          }
-        })
-        .catch((err) =>
-          console.error("Error fetching policy:", err.message)
-        );
-    };
-
-    fetchPolicy();
-    const intervalId = setInterval(fetchPolicy, 300000);
-    return () => clearInterval(intervalId);
-  }, []);
-
-  const handleSelect = (accountId) => {
-    const account = accounts.find((a) => a.Id === accountId);
-    setSelectedAccount(account);
-  };
-
-  useEffect(() => {
-    if (!selectedAccount) return;
-    axios
-      .get(`/api/courseQuery?accountId=${selectedAccount.Id}`)
-      .then((res) => {
-        if (res.data.success) {
-          if (res.data.records.length > 0) {
-            const accountRecord = res.data.records[0];
-            const subRecords = accountRecord.Enrolments ?? [];
-            setBatches(subRecords);
-          } else {
-            setBatches([]);
-          }
-        } else {
-          setError(res.data.message || "Error fetching batch info");
-          setBatches([]);
-        }
-      })
-      .catch((err) => {
-        if (err.response && err.response.status === 401) {
-          setSessionExpired(true);
-        } else {
-          setError(err.message);
-        }
-        setBatches([]);
-      });
-  }, [selectedAccount]);
-
-  // Find the Bronze Cross standard enrollment record (if available)
+  // If there's a Bronze Cross standard enrollment
   const bronzeCrossEnrollment = batches.find(
     (en) =>
       !en.isCombo &&
@@ -205,170 +216,287 @@ export default function DashboardPage() {
   );
 
   return (
-    <Layout accounts={accounts} onSelectAccount={handleSelect}>
+    <>
+      {/** WAVE-SHAPE HEADER (includes Switch Accounts logic) */}
+      <header className="header-wave-parent relative bg-blue-500 text-white overflow-hidden">
+        <div
+          className="my-header absolute inset-0 p-6 flex items-center justify-between"
+          style={{ zIndex: 10 }}
+        >
+          {/* LEFT: portal title + selected account’s name */}
+          <div>
+            <h1 className="text-2xl font-bold">Student Portal</h1>
+            {selectedAccount && (
+              <p className="text-lg font-semibold">{selectedAccount.Name}</p>
+            )}
+          </div>
+
+          {/* RIGHT: Switch Accounts button if multiple accounts exist */}
+          {accounts.length > 1 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                className="flex items-center space-x-2 text-blue-100 hover:text-blue-300 border border-blue-100 px-3 py-2 rounded"
+                style={{ zIndex: 10 }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5.121 17.804A9 9 0 1119 8.999m-2.1 5.1A5 5 0 1012 7.999"
+                  />
+                </svg>
+                <span>Switch Accounts</span>
+              </button>
+
+            </div>
+          )}
+        </div>
+
+        {/* wave shape itself */}
+        <svg
+          className="relative block h-[90px] w-full"
+          preserveAspectRatio="none"
+          viewBox="0 0 1200 120"
+        >
+          <path
+            d="M985.66 40.99c-49.94 2.19-99.88 9.21-149.82 16.12C711 65.55 661 78.1 610.96 83.66 530 92 449 86.32 368 83.29c-49.39-1.72-98.88-1.6-148.23 1.33-52.23 3.14-104.37 8.78-156.58 14.14-2.88.29-52.07 5.75-52.19 7.85 0 .56 1200 0 1200 0v-24.7c-52-3.89-104-7.78-156-11.57z"
+            fill="white"
+          />
+        </svg>
+      </header>
+      
+      {showAccountDropdown && (
+        <div
+          className="absolute right-4 top-24 p-4 border rounded bg-white text-black w-48"
+          style={{ zIndex: 999 }}
+        >
+          <h2 className="text-xl font-bold mb-2 text-center">Accounts</h2>
+          <div className="overflow-y-auto max-h-64">
+            {accounts.map((acc) => (
+              <div
+                key={acc.Id}
+                onClick={() => {
+                  handleSelect(acc.Id);
+                  setShowAccountDropdown(false);
+                }}
+                className="border rounded-lg p-2 mb-2 cursor-pointer hover:bg-blue-50"
+              >
+                <h2 className="text-lg">{acc.Name}</h2>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 border-t pt-2 text-center">
+            <button
+              onClick={handleLogout}
+              className="text-sm text-blue-500 hover:underline"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MAIN DASHBOARD CONTENT */}
       <div className="p-6">
+        {error && <p className="text-red-600 mb-4">{error}</p>}
+
         {selectedAccount ? (
           <h1 className="text-3xl font-semibold mb-6">
             {selectedAccount.Name}
           </h1>
         ) : (
           <h1 className="text-3xl font-semibold mb-6">
-            Please select a student from the left panel
+            Please select a student from above
           </h1>
         )}
-        {error && <p className="text-red-600 mb-4">{error}</p>}
 
-        <div className="flex">
-          <div className="flex-1 bg-white shadow p-6 rounded-lg">
-            {selectedAccount ? (
-              <div>
-                {batches.length > 0 ? (
-                  <div>
-                    {batches.map((enr) => {
-                      console.log("Debug each enrollment:", enr);
-                      let displayedCourseName = "";
-                      let displayedDates = "";
-                      let displayedLocation = "";
-                      let displayedDaysUntilStart = enr.DaysUntilStart;
+        <div className="bg-white shadow p-6 rounded-lg">
+          {selectedAccount ? (
+            batches.length > 0 ? (
+              <>
+                {batches.map((enr) => {
+                  let displayedCourseName = "";
+                  let displayedDates = "";
+                  let displayedLocation = "";
+                  let displayedDaysUntilStart = enr.DaysUntilStart;
 
-                      if (enr.isCombo) {
-                        // For Bronze Combo, if the CourseName contains "Bronze Combo"
-                        if (
-                          enr.CourseName &&
-                          enr.CourseName.includes("Bronze Combo")
-                        ) {
-                          displayedCourseName = "Bronze Combo";
-                          if (bronzeCrossEnrollment) {
-                            // Use the Bronze Cross record's Classroom field to parse dates and location
-                            const parsed = parseBronzeClassroom(bronzeCrossEnrollment.Classroom || "");
-                            // Expect parsed.date to be "April 12-13" and parsed.location to be "Harbord"
-                            displayedDates = parsed.date;
-                            displayedLocation = parsed.location;
-                            displayedDaysUntilStart = bronzeCrossEnrollment.DaysUntilStart;
-                          } else {
-                            // Fallback: parse the combo enrollment's own Classroom field
-                            const parsed = parseBronzeClassroom(enr.Classroom || "");
-                            displayedDates = parsed.date;
-                            displayedLocation = parsed.location;
-                          }
-                        } else {
-                          // For other combo enrollments, use default parser on Registration_Name__c
-                          const parsed = parseCourseName(enr.Registration_Name__c || "");
-                          displayedCourseName = parsed.course || "Untitled Course";
-                          displayedDates = parsed.courseDates;
-                          displayedLocation = parsed.location;
-                        }
+                  // For combo or standard
+                  if (enr.isCombo) {
+                    // Example: Bronze Combo
+                    if (
+                      enr.CourseName &&
+                      enr.CourseName.includes("Bronze Combo")
+                    ) {
+                      displayedCourseName = "Bronze Combo";
+                      // Maybe find a Bronze Cross enrollment
+                      const bronzeCrossEnrollment = batches.find(
+                        (course) =>
+                          !course.isCombo &&
+                          course.CourseName?.includes("Bronze Cross")
+                      );
+                      if (bronzeCrossEnrollment) {
+                        const parsed = parseBronzeClassroom(
+                          bronzeCrossEnrollment.Classroom || ""
+                        );
+                        displayedDates = parsed.date;
+                        displayedLocation = parsed.location;
+                        displayedDaysUntilStart =
+                          bronzeCrossEnrollment.DaysUntilStart;
                       } else {
-                        // For standard enrollments, use parseCourseName on CourseName
-                        const { courseDates, course, location } = parseCourseName(enr.CourseName);
-                        displayedCourseName = course || "Untitled Course";
-                        displayedDates = courseDates || enr.CourseDates;
-                        displayedLocation = location || enr.Location;
+                        // fallback
+                        const parsed = parseBronzeClassroom(
+                          enr.Classroom || ""
+                        );
+                        displayedDates = parsed.date;
+                        displayedLocation = parsed.location;
                       }
+                    } else {
+                      // other combos
+                      const parsed = parseCourseName(
+                        enr.Registration_Name__c || ""
+                      );
+                      displayedCourseName =
+                        parsed.course || "Untitled Course";
+                      displayedDates = parsed.courseDates;
+                      displayedLocation = parsed.location;
+                    }
+                  } else {
+                    // standard enrollment
+                    const { courseDates, course, location } = parseCourseName(
+                      enr.CourseName
+                    );
+                    displayedCourseName = course || "Untitled Course";
+                    displayedDates = courseDates || enr.CourseDates;
+                    displayedLocation = location || enr.Location;
+                  }
 
-                      const policyData = policy && getPolicyForCourse(displayedDaysUntilStart, policy);
+                  // policy details
+                  const policyData =
+                    policy && getPolicyForCourse(displayedDaysUntilStart, policy);
 
-                      return (
-                        <div
-                          key={enr.Id}
-                          className="card mb-4 p-4 border border-gray-300 rounded-md"
-                        >
-                          <div className="card-header">
-                            <span className="text-[#0070d9] font-bold text-lg">
-                              {displayedCourseName}
-                            </span>
-                          </div>
-                          <div className="card-body mt-3">
-                            <div className="flex items-center justify-between flex-wrap gap-6 mt-2">
-                              <div className="flex items-center gap-6">
-                                <div className="flex items-center">
-                                  <span className="mr-2">📅</span>
-                                  {displayedDates}
-                                </div>
-                                <div className="flex items-center">
-                                  <span className="mr-2">📍 </span>
-                                  {displayedLocation}
-                                </div>
-                                <div className="flex items-center">
-                                  <span className="mr-2">⏰ </span>
-                                  {displayedDaysUntilStart < 0 ? (
-                                    "Course has passed"
-                                  ) : (
-                                    <span>{formatDays(displayedDaysUntilStart)}</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-4 text-xs">
-                                {displayedDaysUntilStart >
-                                (policy && policy.daysBeforeReschedule) ? (
-                                  <>
-                                    <a
-                                      href="#"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        console.log("Manually building a new enrollments array for:", enr.Id);
-                                        let newEnrollments = [...selectedEnrollments];
-                                        const existingIndex = newEnrollments.findIndex((obj) => obj.Id === enr.Id);
-                                        if (existingIndex !== -1) {
-                                          newEnrollments = newEnrollments.filter((obj) => obj.Id !== enr.Id);
-                                        } else {
-                                          newEnrollments.push({ Id: enr.Id });
-                                        }
-                                        setSelectedEnrollments(newEnrollments);
-
-                                        const courseName = displayedCourseName || enr.CourseName || "Unknown course";
-                                        console.log("Navigating to reschedule with updated enrollments:", {
-                                          oldCourseName: courseName,
-                                          oldCourseId: enr.BatchId,
-                                          newEnrollments,
-                                        });
-                                        router.push(
-                                          `/reschedule?oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.BatchId}&enrollmentId=${enr.Id}&enrollmentIds=${JSON.stringify(newEnrollments)}`
-                                        );
-                                      }}
-                                      className="text-blue-500 underline"
-                                    >
-                                      Reschedule ({policyData?.reschedule})
-                                    </a>
-                                    <a href="#" className="text-blue-500 underline">
-                                      Refund ({policyData?.refund})
-                                    </a>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span className="text-blue-300 underline">
-                                      Reschedule ({policyData?.reschedule})
-                                    </span>
-                                    <span className="text-blue-300 underline">
-                                      Refund ({policyData?.refund})
-                                    </span>
-                                  </>
-                                )}
-                              </div>
+                  return (
+                    <div
+                      key={enr.Id}
+                      className="card mb-4 p-4 border border-gray-300 rounded-md"
+                    >
+                      <div className="card-header">
+                        <span className="text-[#0070d9] font-bold text-lg">
+                          {displayedCourseName}
+                        </span>
+                      </div>
+                      <div className="card-body mt-3">
+                        <div className="flex items-center justify-between flex-wrap gap-6 mt-2">
+                          <div className="flex items-center gap-6">
+                            <div className="flex items-center">
+                              <span className="mr-2">📅</span>
+                              {displayedDates}
+                            </div>
+                            <div className="flex items-center">
+                              <span className="mr-2">📍</span>
+                              {displayedLocation}
+                            </div>
+                            <div className="flex items-center">
+                              <span className="mr-2">⏰</span>
+                              {displayedDaysUntilStart < 0
+                                ? "Course has passed"
+                                : formatDays(displayedDaysUntilStart)}
                             </div>
                           </div>
+
+                          <div className="flex items-center gap-4 text-xs">
+                            {displayedDaysUntilStart >
+                            (policy?.daysBeforeReschedule ?? 0) ? (
+                              <>
+                                <a
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    // Toggle the enrollment in selectedEnrollments
+                                    let newEnrollments = [...selectedEnrollments];
+                                    const existingIndex = newEnrollments.findIndex(
+                                      (obj) => obj.Id === enr.Id
+                                    );
+                                    if (existingIndex !== -1) {
+                                      newEnrollments = newEnrollments.filter(
+                                        (obj) => obj.Id !== enr.Id
+                                      );
+                                    } else {
+                                      newEnrollments.push({ Id: enr.Id });
+                                    }
+                                    setSelectedEnrollments(newEnrollments);
+
+                                    const courseName =
+                                      displayedCourseName ||
+                                      enr.CourseName ||
+                                      "Unknown course";
+
+                                    router.push(
+                                      `/reschedule?oldCourseName=${encodeURIComponent(
+                                        courseName
+                                      )}&oldCourseId=${
+                                        enr.BatchId
+                                      }&enrollmentId=${
+                                        enr.Id
+                                      }&enrollmentIds=${JSON.stringify(
+                                        newEnrollments
+                                      )}`
+                                    );
+                                  }}
+                                  className="text-blue-500 underline"
+                                >
+                                  Reschedule ({policyData?.reschedule})
+                                </a>
+                                <a
+                                  href="#"
+                                  className="text-blue-500 underline"
+                                >
+                                  Refund ({policyData?.refund})
+                                </a>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-blue-300 underline">
+                                  Reschedule ({policyData?.reschedule})
+                                </span>
+                                <span className="text-blue-300 underline">
+                                  Refund ({policyData?.refund})
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-gray-700">
-                    No course batches found for this account.
-                  </p>
-                )}
-              </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
             ) : (
               <p className="text-gray-700">
-                Please select an account to view details.
+                No course batches found for this account.
               </p>
-            )}
-          </div>
+            )
+          ) : (
+            <p className="text-gray-700">
+              Please select an account to view details.
+            </p>
+          )}
         </div>
       </div>
+
       {sessionExpired && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-md shadow-md">
-            <p className="mb-4 text-lg text-center">Your session has expired. Please log in again.</p>
+            <p className="mb-4 text-lg text-center">
+              Your session has expired. Please log in again.
+            </p>
             <button
               onClick={() => router.push("/login")}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -378,6 +506,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }
