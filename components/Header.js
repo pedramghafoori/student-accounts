@@ -1,18 +1,30 @@
-{/** WAVE-SHAPE HEADER (includes Switch Accounts logic) */}
+// components/Header.js
+"use client";
+import React from "react";
+
+export default function Header({
+  selectedAccount,       // Accept as a prop
+  headerTagline = "", // provide a default or expect the caller to pass it
+  accounts,
+  showAccountDropdown,
+  setShowAccountDropdown,
+  handleSelect,
+  handleLogout,
+}) {
+  return (
+    <>
       <header className="header-wave-parent relative bg-blue-500 text-white overflow-hidden">
         <div
           className="my-header absolute inset-0 p-6 flex items-center justify-between"
           style={{ zIndex: 10 }}
         >
-          {/* LEFT: portal title + selected account’s name */}
           <div>
-            <h1 className="text-lg font-thin">Student</h1>
+            <h1 className="text-lg font-thin">{headerTagline}</h1>
             {selectedAccount && (
-            <p className="text-4xl font-bold">{selectedAccount.Name}</p>
+              <p className="text-4xl font-bold">{selectedAccount.Name}</p>
             )}
           </div>
 
-          {/* RIGHT: Switch Accounts button if multiple accounts exist */}
           {accounts.length > 1 && (
             <div className="relative">
               <button
@@ -35,12 +47,10 @@
                 />
               </svg>
               </button>
-
             </div>
           )}
         </div>
 
-        {/* wave shape itself */}
         <svg
           className="relative block h-[90px] w-full"
           preserveAspectRatio="none"
@@ -52,13 +62,12 @@
           />
         </svg>
       </header>
-      
+
       {showAccountDropdown && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
           style={{ zIndex: 999 }}
           onClick={(e) => {
-            // If the click target is the backdrop itself, close the dropdown.
             if (e.target === e.currentTarget) {
               setShowAccountDropdown(false);
             }
@@ -91,3 +100,6 @@
           </div>
         </div>
       )}
+    </>
+  );
+}
