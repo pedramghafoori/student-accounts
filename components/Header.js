@@ -35,6 +35,7 @@ export default function Header({
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-8 w-8 text-white fill-current"
+                  fill = "currentColor"
                   shapeRendering="geometricPrecision"
                   textRendering="geometricPrecision"
                   imageRendering="optimizeQuality"

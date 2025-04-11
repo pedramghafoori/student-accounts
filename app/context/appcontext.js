@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useState, useEffect } from "react";
 import axios from "axios";
+// We'll store the full array of accounts in allAccounts
 
 export const AppContext = createContext(null);
 
@@ -8,6 +9,7 @@ export default function AppProvider({ children }) {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [registrations, setRegistrations] = useState([]);
   const [error, setError] = useState("");
+  const [allAccounts, setAllAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
 
@@ -24,8 +26,20 @@ export default function AppProvider({ children }) {
   }, [error]);
 
   useEffect(() => {
-    console.log("[AppContext] sessionExpired changed:", sessionExpired);
-  }, [sessionExpired]);
+    console.log("[AppContext] allAccounts changed:", allAccounts);
+  }, [allAccounts]);
+
+  // 1) On mount, fetch the full array of accounts
+  useEffect(() => {
+    axios.get("/api/salesforce")
+      .then((res) => {
+        if (res.data.success) {
+          if (res.data.accounts) setAllAccounts(res.data.accounts);
+          else if (res.data.account) setAllAccounts([res.data.account]);
+        } else setError(res.data.message || "Error fetching accounts");
+      })
+      .catch((err) => setError(err.message));
+  }, []);
 
   // Whenever selectedAccount changes, fetch registrations
   useEffect(() => {
@@ -57,7 +71,10 @@ export default function AppProvider({ children }) {
     setSelectedAccount(acc);
   }
 
+  // Provide allAccounts in context
   const contextValue = {
+    allAccounts,
+    setAllAccounts,
     selectedAccount,
     setSelectedAccount,
     registrations,

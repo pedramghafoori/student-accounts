@@ -242,7 +242,7 @@ export default function DashboardPage() {
         handleSelect={handleSelect}
         handleLogout={handleLogout}
       />
-    
+      
 
       {/* MAIN DASHBOARD CONTENT */}
       <div className="p-6">
