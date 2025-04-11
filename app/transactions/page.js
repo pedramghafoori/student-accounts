@@ -43,13 +43,22 @@ function TransactionRow({ transaction }) {
 }
 
 export default function TransactionsPage() {
-  const { selectedAccount, registrations, error, sessionExpired } = useContext(AppContext);
+  const {
+    selectedAccount,
+    setSelectedAccount, // add this
+    error,
+    registrations,
+    setRegistrations,
+    sessionExpired,
+    allAccounts,
+  } = useContext(AppContext);
 
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   function handleSelect(accountId) {
     console.log("Select account:", accountId);
-    // Possibly set selectedAccount from context, or however you do it
+    const newAccount = allAccounts?.find((acct) => acct.Id === accountId);
+    setSelectedAccount(newAccount || null);
   }
 
   function handleLogout() {
@@ -57,26 +66,60 @@ export default function TransactionsPage() {
     // Possibly remove cookies or do your logout logic
   }
 
+  console.log('Parent is passing:', {
+    showAccountDropdown,
+    accounts: allAccounts,
+    handleSelect,
+  });
+
+  useEffect(() => {
+    if (!selectedAccount) return;
+    axios
+      .get(`/api/transactions/registrations?accountId=${selectedAccount.Id}`)
+      .then((res) => {
+        if (res.data.success) {
+          setRegistrations(res.data.records);
+        }
+      })
+      .catch((err) => console.error("Error retrieving registrations:", err));
+  }, [selectedAccount, setRegistrations]);
+
   if (!selectedAccount) {
     return (
-      <div className="p-6">
-        <h1 className="text-3xl font-semibold mb-4">Transactions for</h1>
-        <p className="text-gray-600">Please select an account.</p>
-      </div>
+      <>
+        <div className="text-white text-4xl">
+          <Header
+            headerTagline="Transactions for"
+            selectedAccount={selectedAccount}
+            accounts={allAccounts || []} // or your actual accounts array
+            showAccountDropdown={showAccountDropdown}
+            setShowAccountDropdown={setShowAccountDropdown}
+            handleSelect={handleSelect}
+            handleLogout={handleLogout}
+          />
+        </div>
+
+        <div className="p-6">
+          <h1 className="text-3xl font-semibold mb-4">Transactions for</h1>
+          <p className="text-gray-600">Please select an account.</p>
+        </div>
+      </>
     );
   }
 
   return (
     <>
-      <Header
-        headerTagline="Transactions for"
-        selectedAccount={selectedAccount}
-        accounts={registrations || []} // or maybe the real accounts array from context
-        showAccountDropdown={showAccountDropdown}
-        setShowAccountDropdown={setShowAccountDropdown}
-        handleSelect={handleSelect}
-        handleLogout={handleLogout}
-      />
+      <div className="text-white text-4xl">
+        <Header
+          headerTagline="Transactions for"
+          selectedAccount={selectedAccount}
+          accounts={allAccounts || []}
+          showAccountDropdown={showAccountDropdown}
+          setShowAccountDropdown={setShowAccountDropdown}
+          handleSelect={handleSelect}
+          handleLogout={handleLogout}
+        />
+      </div>
 
       <div className="p-6">
         <h1 className="text-3xl font-semibold mb-4">Transactions</h1>

@@ -11,7 +11,7 @@ export default function MyInfoPage() {
     // ...
   }, []);
 
-  const { selectedAccount, accounts } = useContext(AppContext);
+  const { selectedAccount, allAccounts } = useContext(AppContext);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   function handleSelect(accountId) {
@@ -27,7 +27,7 @@ export default function MyInfoPage() {
       <Header
         headerTagline="My Info"
         selectedAccount={selectedAccount}
-        accounts={accounts || []}
+        accounts={allAccounts || []} // or your actual accounts array
         showAccountDropdown={showAccountDropdown}
         setShowAccountDropdown={setShowAccountDropdown}
         handleSelect={handleSelect}

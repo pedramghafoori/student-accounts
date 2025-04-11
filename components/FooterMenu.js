@@ -87,22 +87,22 @@ export default function FooterMenu({ allUserAccounts = [] }) {
           }`}
         >
           <svg
-  xmlns="http://www.w3.org/2000/svg"
-  className="footer-menu-icon"
-  fill="none"
-  viewBox="0 0 29 24"   // <- wider canvas
-  stroke="currentColor"
-  strokeWidth="2"
-  strokeLinecap="round"
-  strokeLinejoin="round"
->
-  <rect x="1" y="4" width="27" height="17" rx="2" ry="2" />
-  <line x1="1" y1="8" x2="26" y2="8" />
-  <line x1="4" y1="13" x2="15" y2="13" />
-  <line x1="20" y1="13" x2="25" y2="13" />
-  <line x1="4" y1="17" x2="14" y2="17" />
+          xmlns="http://www.w3.org/2000/svg"
+          className="footer-menu-icon"
+          fill="none"
+          viewBox="0 0 29 24"   // <- wider canvas
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="1" y="4" width="27" height="17" rx="2" ry="2" />
+          <line x1="1" y1="8" x2="26" y2="8" />
+          <line x1="4" y1="13" x2="15" y2="13" />
+          <line x1="20" y1="13" x2="25" y2="13" />
+          <line x1="4" y1="17" x2="14" y2="17" />
 
-</svg>
+        </svg>
           <span className="footer-menu-label">Transactions</span>
         </Link>
       </div>

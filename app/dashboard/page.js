@@ -222,6 +222,13 @@ export default function DashboardPage() {
     document.cookie = "userToken=; path=/; max-age=0;";
     router.push("/login");
   }
+  
+  console.log('DashboardPage state:', {
+    accounts,
+    selectedAccount,
+    showAccountDropdown,
+    error,
+  });
 
   // If there's a Bronze Cross standard enrollment
   const bronzeCrossEnrollment = batches.find(
@@ -233,6 +240,7 @@ export default function DashboardPage() {
 
   return (
     <>
+    
       <Header
         headerTagline="Courses for"     //  <--- dynamic tagline
         selectedAccount={selectedAccount}
@@ -242,6 +250,7 @@ export default function DashboardPage() {
         handleSelect={handleSelect}
         handleLogout={handleLogout}
       />
+
       
 
       {/* MAIN DASHBOARD CONTENT */}
@@ -448,4 +457,4 @@ export default function DashboardPage() {
       )}
     </>
   );
-}
+  }
