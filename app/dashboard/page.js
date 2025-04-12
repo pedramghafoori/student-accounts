@@ -243,7 +243,7 @@ export default function DashboardPage() {
     <>
     
       <Header
-        headerTagline="Courses for"     //  <--- dynamic tagline
+        headerTagline="Upcoming Course"     //  <--- dynamic tagline
         selectedAccount={selectedAccount}
         accounts={accounts}
         showAccountDropdown={showAccountDropdown}
@@ -422,7 +422,7 @@ export default function DashboardPage() {
               </>
             ) : (
               <div className="text-gray-700">
-                <p>No upcoming courses found.</p>
+                <p>You don&apos;t have any upcoming courses. Click here to view your past courses!</p>
                 <button
                   className="bg-blue-500 text-white px-4 py-2 mt-4 rounded"
                   onClick={() => router.push("/past-courses")}

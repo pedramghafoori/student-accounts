@@ -19,9 +19,9 @@ export default function Header({
           style={{ zIndex: 10 }}
         >
           <div>
-            <h1 className="text-lg font-thin">{headerTagline}</h1>
+            <h1 className="header-account-tagline">{headerTagline}</h1>
             {selectedAccount && (
-              <p className="text-4xl font-bold">{selectedAccount.Name}</p>
+              <p className="header-account-name">{selectedAccount.Name}</p>
             )}
           </div>
 
