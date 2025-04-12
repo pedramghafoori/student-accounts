@@ -22,7 +22,8 @@ function TransactionRow({ transaction }) {
   }, [transaction.Transaction_Reference__c]);
 
   return (
-    <div className="border p-3 my-2 rounded">
+    // Card-like styling for each transaction row
+    <div className="card mt-2 p-3 border border-gray-300 rounded-md">
       <p className="text-sm">
         <strong>Stripe Ref:</strong> {transaction.Transaction_Reference__c || "N/A"}
       </p>
@@ -45,7 +46,7 @@ function TransactionRow({ transaction }) {
 export default function TransactionsPage() {
   const {
     selectedAccount,
-    setSelectedAccount, // add this
+    setSelectedAccount,
     error,
     registrations,
     setRegistrations,
@@ -66,7 +67,7 @@ export default function TransactionsPage() {
     // Possibly remove cookies or do your logout logic
   }
 
-  console.log('Parent is passing:', {
+  console.log("Parent is passing:", {
     showAccountDropdown,
     accounts: allAccounts,
     handleSelect,
@@ -84,32 +85,10 @@ export default function TransactionsPage() {
       .catch((err) => console.error("Error retrieving registrations:", err));
   }, [selectedAccount, setRegistrations]);
 
+  // If no account is selected yet
   if (!selectedAccount) {
     return (
       <>
-        <div className="text-white text-4xl">
-          <Header
-            headerTagline="Transactions for"
-            selectedAccount={selectedAccount}
-            accounts={allAccounts || []} // or your actual accounts array
-            showAccountDropdown={showAccountDropdown}
-            setShowAccountDropdown={setShowAccountDropdown}
-            handleSelect={handleSelect}
-            handleLogout={handleLogout}
-          />
-        </div>
-
-        <div className="p-6">
-          <h1 className="text-3xl font-semibold mb-4">Transactions for</h1>
-          <p className="text-gray-600">Please select an account.</p>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className="text-white text-4xl">
         <Header
           headerTagline="Transactions for"
           selectedAccount={selectedAccount}
@@ -119,110 +98,216 @@ export default function TransactionsPage() {
           handleSelect={handleSelect}
           handleLogout={handleLogout}
         />
-      </div>
+
+        <div className="p-6">
+          <div className="bg-white shadow p-6 rounded-lg">
+            <h1 className="text-3xl font-semibold mb-4">Transactions for</h1>
+            <p className="text-gray-600">Please select an account.</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header
+        headerTagline="Transactions for"
+        selectedAccount={selectedAccount}
+        accounts={allAccounts || []}
+        showAccountDropdown={showAccountDropdown}
+        setShowAccountDropdown={setShowAccountDropdown}
+        handleSelect={handleSelect}
+        handleLogout={handleLogout}
+      />
 
       <div className="p-6">
-        <h1 className="text-3xl font-semibold mb-4">Transactions</h1>
+        <div className="bg-white shadow p-6 rounded-lg">
+          <h1 className="text-3xl font-semibold mb-4">Transactions</h1>
 
-        {error && <p className="text-red-600 mb-4">{error}</p>}
+          {error && <p className="text-red-600 mb-4">{error}</p>}
 
-        {registrations && registrations.length > 0 ? (
-          registrations.map((reg) => {
-            const transactions = reg.Transactions__r?.records || [];
-            return (
-              <div key={reg.Id} className="mb-6 border p-4 rounded-md shadow">
-                <h2 className="text-xl font-bold mb-2">{reg.Name || "Untitled Registration"}</h2>
-
-                <div className="mb-4 text-sm text-gray-600 space-y-1">
-                  <div className="flex items-center mb-2">
-                    <svg className="h-4 w-4 text-gray-500 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2 7h20M2 11h20M2 15h20M2 19h20" />
-                    </svg>
-                    <p>
-                      <strong>Registration Number:</strong> {reg.Registration_Number__c}
-                    </p>
+          {registrations && registrations.length > 0 ? (
+            registrations.map((reg) => {
+              const transactions = reg.Transactions__r?.records || [];
+              return (
+                // Card for each registration
+                <div
+                  key={reg.Id}
+                  className="card mb-4 p-4 border border-gray-300 rounded-md"
+                >
+                  <div className="card-header">
+                    <h2 className="text-[#0070d9] font-bold text-lg">
+                      {reg.Name || "Untitled Registration"}
+                    </h2>
                   </div>
-                  <div className="flex items-center mb-2">
-                    <svg className="h-4 w-4 text-gray-500 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10m-10 4h4" />
-                      <rect x="3" y="5" width="18" height="16" rx="2" ry="2" />
-                    </svg>
-                    <p>
-                      <strong>Close Date:</strong> {reg.CloseDate ? new Date(reg.CloseDate).toLocaleDateString() : "N/A"}
-                    </p>
+
+                  <div className="card-body mt-3">
+                    <div className="flex flex-wrap gap-6 items-start text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <svg
+                          className="h-4 w-4 text-gray-500 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M2 7h20M2 11h20M2 15h20M2 19h20"
+                          />
+                        </svg>
+                        <p>
+                          <strong>Registration Number:</strong>{" "}
+                          {reg.Registration_Number__c}
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <svg
+                          className="h-4 w-4 text-gray-500 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M8 7V3m8 4V3m-9 8h10m-10 4h4"
+                          />
+                          <rect x="3" y="5" width="18" height="16" rx="2" ry="2" />
+                        </svg>
+                        <p>
+                          <strong>Close Date:</strong>{" "}
+                          {reg.CloseDate
+                            ? new Date(reg.CloseDate).toLocaleDateString()
+                            : "N/A"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <h3 className="text-lg font-semibold mb-2 flex items-center mt-4">
+                      <svg
+                        className="h-5 w-5 text-gray-600 mr-1"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M..." />
+                      </svg>
+                      Financials
+                    </h3>
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <svg
+                          className="h-4 w-4 text-gray-500 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M..." />
+                        </svg>
+                        <p>
+                          <strong>Course Amount:</strong>{" "}
+                          {reg.Course_Amount__c || 0}
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <svg
+                          className="h-4 w-4 text-gray-500 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M..." />
+                        </svg>
+                        <p>
+                          <strong>Discount:</strong> {reg.Discount_Amount__c || 0}
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <svg
+                          className="h-4 w-4 text-gray-500 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M..." />
+                        </svg>
+                        <p>
+                          <strong>Tax:</strong> {reg.Net_Tax__c || 0}
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <svg
+                          className="h-4 w-4 text-gray-500 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M..." />
+                        </svg>
+                        <p>
+                          <strong>Add-On Amount:</strong>{" "}
+                          {reg.Add_On_Amount__c || 0}
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <svg
+                          className="h-4 w-4 text-gray-500 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M..." />
+                        </svg>
+                        <p>
+                          <strong>Total Captured:</strong>{" "}
+                          {reg.Total_Captured__c || 0}
+                        </p>
+                      </div>
+                    </div>
+
+                    {transactions.length > 0 ? (
+                      <>
+                        <h4 className="font-semibold mt-4 mb-2">Stripe Transactions</h4>
+                        {transactions.map((tx) => (
+                          <TransactionRow key={tx.Id} transaction={tx} />
+                        ))}
+                      </>
+                    ) : (
+                      <p className="text-gray-500 mt-2 text-sm">
+                        No related Transactions found.
+                      </p>
+                    )}
                   </div>
                 </div>
-
-                <h3 className="text-lg font-semibold mb-2 flex items-center">
-                  <svg
-                    className="h-5 w-5 text-gray-600 mr-1"
-                    fill="none" stroke="currentColor" strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M..." />
-                  </svg>
-                  Financials
-                </h3>
-                <div className="mb-2 text-sm space-y-1">
-                  <div className="flex items-center">
-                    <svg className="h-4 w-4 text-gray-500 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M..." />
-                    </svg>
-                    <p><strong>Course Amount:</strong> {reg.Course_Amount__c || 0}</p>
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="h-4 w-4 text-gray-500 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M..." />
-                    </svg>
-                    <p><strong>Discount:</strong> {reg.Discount_Amount__c || 0}</p>
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="h-4 w-4 text-gray-500 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M..." />
-                    </svg>
-                    <p><strong>Tax:</strong> {reg.Net_Tax__c || 0}</p>
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="h-4 w-4 text-gray-500 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M..." />
-                    </svg>
-                    <p><strong>Add-On Amount:</strong> {reg.Add_On_Amount__c || 0}</p>
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="h-4 w-4 text-gray-500 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M..." />
-                    </svg>
-                    <p><strong>Total Captured:</strong> {reg.Total_Captured__c || 0}</p>
-                  </div>
-                </div>
-
-                {transactions.length > 0 ? (
-                  <>
-                    <h4 className="font-semibold mt-4 mb-2">Stripe Transactions</h4>
-                    {transactions.map((tx) => (
-                      <TransactionRow key={tx.Id} transaction={tx} />
-                    ))}
-                  </>
-                ) : (
-                  <p className="text-gray-500 mt-2 text-sm">No related Transactions found.</p>
-                )}
-              </div>
-            );
-          })
-        ) : (
-          <p className="text-gray-600">No registrations found.</p>
-        )}
-
-        {sessionExpired && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white p-6 rounded-md shadow-md">
-              <p className="mb-4 text-lg text-center">
-                Your session has expired. Please log in again.
-              </p>
-            </div>
-          </div>
-        )}
+              );
+            })
+          ) : (
+            <p className="text-gray-700">No registrations found.</p>
+          )}
+        </div>
       </div>
+
+      {sessionExpired && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-md shadow-md">
+            <p className="mb-4 text-lg text-center">
+              Your session has expired. Please log in again.
+            </p>
+            {/* In this code snippet, no direct navigation is set up for login.
+                You can add a button or handle it as needed, depending on your workflow. */}
+          </div>
+        </div>
+      )}
     </>
   );
 }

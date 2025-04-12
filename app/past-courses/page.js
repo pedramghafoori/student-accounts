@@ -103,9 +103,9 @@ function formatDays(days) {
   }
 }
 
-export default function DashboardPage() {
+export default function PastCoursesPage() {
   const router = useRouter();
-  
+
   // Local state declarations
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
@@ -114,18 +114,17 @@ export default function DashboardPage() {
   const [policy, setPolicy] = useState(null);
   const [error, setError] = useState("");
   const [sessionExpired, setSessionExpired] = useState(false);
-  const [selectedEnrollments, setSelectedEnrollments] = useState([]);
-  
+
   // Destructure context values
   const { selectedAccount: globalAccount, updateGlobalSelectedAccount } = useContext(AppContext);
-  
+
   useEffect(() => {
     // If there's no globalAccount, show the dropdown so the user can pick one
     if (!globalAccount) {
       setShowAccountDropdown(true);
     }
   }, [globalAccount]);
-  
+
   // Effect to set local selectedAccount from context if not already set
   useEffect(() => {
     if (!selectedAccount && globalAccount) {
@@ -204,46 +203,29 @@ export default function DashboardPage() {
       });
   }, [selectedAccount]);
 
-  /** 5) For toggling enrollment selection (reschedule, etc.) */
-  function handleToggleEnrollment(id) {
-    setSelectedEnrollments((prev) => {
-      const existingIndex = prev.findIndex((obj) => obj.Id === id);
-      if (existingIndex !== -1) {
-        return prev.filter((obj) => obj.Id !== id);
-      } else {
-        return [...prev, { Id: id }];
-      }
-    });
-  }
-
-  /** 6) If you need a logout, define it here */
+  /** 5) If you need a logout, define it here */
   function handleLogout() {
     // Example: remove cookie, redirect to login, etc.
     document.cookie = "userToken=; path=/; max-age=0;";
     router.push("/login");
   }
-  
-  console.log('DashboardPage state:', {
+
+  console.log("PastCoursesPage state:", {
     accounts,
     selectedAccount,
     showAccountDropdown,
     error,
   });
-  const upcomingCourses = batches.filter((enr) => enr.DaysUntilStart >= 0);
 
-  // If there's a Bronze Cross standard enrollment
-  const bronzeCrossEnrollment = batches.find(
-    (en) =>
-      !en.isCombo &&
-      en.CourseName &&
-      en.CourseName.includes("Bronze Cross")
-  );
+  // Filter out only the past courses
+  const pastCourses = batches.filter((enr) => {
+    return enr.DaysUntilStart < 0;
+  });
 
   return (
     <>
-    
       <Header
-        headerTagline="Courses for"     //  <--- dynamic tagline
+        headerTagline="Past Courses for"
         selectedAccount={selectedAccount}
         accounts={accounts}
         showAccountDropdown={showAccountDropdown}
@@ -252,9 +234,7 @@ export default function DashboardPage() {
         handleLogout={handleLogout}
       />
 
-      
-
-      {/* MAIN DASHBOARD CONTENT */}
+      {/* MAIN CONTENT */}
       <div className="p-6">
         {error && <p className="text-red-600 mb-4">{error}</p>}
 
@@ -270,9 +250,9 @@ export default function DashboardPage() {
 
         <div className="bg-white shadow p-6 rounded-lg">
           {selectedAccount ? (
-            upcomingCourses.length > 0 ? (
+            pastCourses.length > 0 ? (
               <>
-                {upcomingCourses.map((enr) => {
+                {pastCourses.map((enr) => {
                   let displayedCourseName = "";
                   let displayedDates = "";
                   let displayedLocation = "";
@@ -286,28 +266,12 @@ export default function DashboardPage() {
                       enr.CourseName.includes("Bronze Combo")
                     ) {
                       displayedCourseName = "Bronze Combo";
-                      // Maybe find a Bronze Cross enrollment
-                      const bronzeCrossEnrollment = batches.find(
-                        (course) =>
-                          !course.isCombo &&
-                          course.CourseName?.includes("Bronze Cross")
+                      // For combos, parse date/location if needed
+                      const parsed = parseBronzeClassroom(
+                        enr.Classroom || ""
                       );
-                      if (bronzeCrossEnrollment) {
-                        const parsed = parseBronzeClassroom(
-                          bronzeCrossEnrollment.Classroom || ""
-                        );
-                        displayedDates = parsed.date;
-                        displayedLocation = parsed.location;
-                        displayedDaysUntilStart =
-                          bronzeCrossEnrollment.DaysUntilStart;
-                      } else {
-                        // fallback
-                        const parsed = parseBronzeClassroom(
-                          enr.Classroom || ""
-                        );
-                        displayedDates = parsed.date;
-                        displayedLocation = parsed.location;
-                      }
+                      displayedDates = parsed.date;
+                      displayedLocation = parsed.location;
                     } else {
                       // other combos
                       const parsed = parseCourseName(
@@ -327,10 +291,6 @@ export default function DashboardPage() {
                     displayedDates = courseDates || enr.CourseDates;
                     displayedLocation = location || enr.Location;
                   }
-
-                  // policy details
-                  const policyData =
-                    policy && getPolicyForCourse(displayedDaysUntilStart, policy);
 
                   return (
                     <div
@@ -355,65 +315,10 @@ export default function DashboardPage() {
                             </div>
                             <div className="flex items-center">
                               <span className="mr-2">⏰</span>
-                              {displayedDaysUntilStart < 0
-                                ? "Course has passed"
-                                : formatDays(displayedDaysUntilStart)}
+                              Course has passed
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-4 text-xs">
-                            {displayedDaysUntilStart >
-                            (policy?.daysBeforeReschedule ?? 0) ? (
-                              <>
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    // Toggle the enrollment in selectedEnrollments
-                                    let newEnrollments = [...selectedEnrollments];
-                                    const existingIndex = newEnrollments.findIndex(
-                                      (obj) => obj.Id === enr.Id
-                                    );
-                                    if (existingIndex !== -1) {
-                                      newEnrollments = newEnrollments.filter(
-                                        (obj) => obj.Id !== enr.Id
-                                      );
-                                    } else {
-                                      newEnrollments.push({ Id: enr.Id });
-                                    }
-                                    setSelectedEnrollments(newEnrollments);
-
-                                    const courseName =
-                                      displayedCourseName ||
-                                      enr.CourseName ||
-                                      "Unknown course";
-
-                                    router.push(
-                                      `/reschedule?courseType=${encodeURIComponent(courseName)}&oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.BatchId}&enrollmentId=${enr.Id}&enrollmentIds=${JSON.stringify(newEnrollments)}&oldCourseLocation=${encodeURIComponent(displayedLocation)}&oldCourseStartDate=${encodeURIComponent(enr.Start_date_time__c || '')}`
-                                    );
-                                  }}
-                                  className="text-blue-500 underline"
-                                >
-                                  Reschedule ({policyData?.reschedule})
-                                </a>
-                                <a
-                                  href="#"
-                                  className="text-blue-500 underline"
-                                >
-                                  Refund ({policyData?.refund})
-                                </a>
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-blue-300 underline">
-                                  Reschedule ({policyData?.reschedule})
-                                </span>
-                                <span className="text-blue-300 underline">
-                                  Refund ({policyData?.refund})
-                                </span>
-                              </>
-                            )}
-                          </div>
+                          {/* For past courses, we no longer show reschedule/refund links */}
                         </div>
                       </div>
                     </div>
@@ -421,19 +326,13 @@ export default function DashboardPage() {
                 })}
               </>
             ) : (
-              <div className="text-gray-700">
-                <p>No upcoming courses found.</p>
-                <button
-                  className="bg-blue-500 text-white px-4 py-2 mt-4 rounded"
-                  onClick={() => router.push("/past-courses")}
-                >
-                  View Past Courses
-                </button>
-              </div>
+              <p className="text-gray-700">
+                No past courses found.
+              </p>
             )
           ) : (
             <p className="text-gray-700">
-              Please select a student to view past and upcoming courses.
+              Please select a student to view past courses.
             </p>
           )}
         </div>
@@ -456,4 +355,4 @@ export default function DashboardPage() {
       )}
     </>
   );
-  }
+}

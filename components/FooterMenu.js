@@ -41,7 +41,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
               10.5l-9-5.25-9 5.25"
             />
           </svg>
-          <span className="footer-menu-label">Courses</span>
+          <span className="footer-menu-label">Upcoming Courses</span>
         </Link>
 
         {/* Accounts */}
@@ -50,7 +50,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
             isActive("/accounts") ? "border-2 border-blue-500 rounded-full p-2" : ""
           }`}
         >
-          <Link href="/myinfo" className="flex flex-col items-center">
+          <Link href="/past-courses" className="flex flex-col items-center">
             <svg
             xmlns="http://www.w3.org/2000/svg"
             className="footer-menu-icon"
@@ -62,7 +62,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
             <circle cx="12" cy="7" r="5" />
             <path d="M4 22c1-7 6-10 8-10s7 3 8 10" />
             </svg>
-            <span className="footer-menu-label">My Info</span>
+            <span className="footer-menu-label">Past Courses</span>
           </Link>
           {/* Hover dropdown content */}
           <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white text-black border border-gray-200 shadow-lg rounded p-2 w-48">
