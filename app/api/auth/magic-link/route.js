@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sign } from 'jsonwebtoken';
 
-// GET = Step 1: Show “Confirm Login” page (do not mark token as used).
+// GET = Step 1: Show "Confirm Login" page (do not mark token as used).
 export async function GET(request) {
   try {
     // 1) Parse token from query string
@@ -36,7 +36,7 @@ export async function GET(request) {
       );
     }
 
-    // 3) Redirect to the new “confirm” page instead of returning HTML
+    // 3) Redirect to the new "confirm" page instead of returning HTML
     return NextResponse.redirect(`${process.env.APP_URL}/login/confirm?token=${token}`);
   } catch (err) {
     console.error('Magic link GET error:', err);
@@ -106,8 +106,8 @@ export async function POST(request) {
       httpOnly: true,
       path: '/',
       maxAge: 60 * 60, // 1 hour
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
+      secure: true, // Always secure in production
+      sameSite: 'none' // Allow cross-site requests
     });
 
     return response;
