@@ -14,7 +14,7 @@ import { verify } from 'jsonwebtoken';
 import jsforce from 'jsforce';
 import { getOAuth2 } from '@/lib/salesforce';
 import redisClient from '@/lib/redisClient';
-import { getCourseCode } from '@/lib/coursecodes';
+import { getCourseCode } from '@/lib/courseCodes';
 
 console.log('=> [Global] /api/addons/route.js loaded');
 
