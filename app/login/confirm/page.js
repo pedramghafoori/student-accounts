@@ -1,72 +1,64 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import axios from "axios";
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function ConfirmPage() {
-  const router = useRouter();
+function ConfirmContent() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-  const [status, setStatus] = useState("");
+  const token = searchParams.get('token');
 
-  async function handleConfirm() {
+  const handleConfirm = async () => {
     try {
-      setStatus("Confirming...");
-      
-      // Create form data with the token
       const formData = new FormData();
-      formData.append("token", token);
+      formData.append('token', token);
 
-      // Make a POST request to the magic-link endpoint
-      const response = await fetch("/api/auth/magic-link", {
-        method: "POST",
+      const response = await fetch('/api/auth/magic-link', {
+        method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to confirm login");
+        throw new Error('Failed to confirm login');
       }
 
-      // The magic-link endpoint will handle setting the cookie and redirecting
-      // No need to do anything else here
-    } catch (err) {
-      setStatus("Error: " + err.message);
+      // The API will handle the redirect
+    } catch (error) {
+      console.error('Error confirming login:', error);
     }
-  }
-
-  const isLoading = status === "Confirming...";
+  };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-r from-gray-100 to-gray-300 px-4">
-      <div className="w-full max-w-sm bg-white border border-gray-200 p-6 rounded-lg shadow-lg transition-all">
-        <h1 className="text-xl font-semibold text-center text-gray-800 mb-8">
-          Confirm Login
-        </h1>
-
-        <p className="text-center text-sm text-gray-600 mb-8">
-          Please confirm your login below.
-        </p>
-
-        <button
-          onClick={handleConfirm}
-          disabled={isLoading}
-          className="transform hover:scale-105 w-full py-2 text-sm font-medium text-white bg-blue-800 rounded hover:bg-blue-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? "Loading..." : "Confirm Login"}
-        </button>
-
-        {status && (
-          <div className="mt-4 text-sm text-center text-gray-600">
-            {status}
-            {isLoading && (
-              <div className="flex justify-center mt-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-800" />
-              </div>
-            )}
-          </div>
-        )}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Confirm Your Login
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Click the button below to complete your login
+          </p>
+        </div>
+        <div>
+          <button
+            onClick={handleConfirm}
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Confirm Login
+          </button>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function ConfirmPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-pulse text-gray-500">Loading...</div>
+      </div>
+    }>
+      <ConfirmContent />
+    </Suspense>
   );
 }
