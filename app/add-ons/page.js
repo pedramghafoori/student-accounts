@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../components/Header";
 import Image from "next/image";
 
-export default function AddOnProductsPage() {
+function AddOnsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -268,5 +268,13 @@ export default function AddOnProductsPage() {
         )}
       </div>
     </>
+  );
+}
+
+export default function AddOnProductsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AddOnsContent />
+    </Suspense>
   );
 }
