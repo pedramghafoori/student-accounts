@@ -87,27 +87,26 @@ export async function POST(request) {
       data: { used: true },
     });
 
-    // 4) Create JWT & set cookie
-    const userEmail = record.email;
-    let jwt;
-    try {
-      jwt = sign({ email: userEmail }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    } catch (jwtErr) {
-      console.error('JWT signing error:', jwtErr);
-      return NextResponse.json(
-        { success: false, message: 'Error creating auth token' },
-        { status: 500 }
-      );
-    }
+    // 4) Create JWT token
+    const jwt = sign(
+      { email: record.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
     // 5) Redirect user to /dashboard, setting userToken cookie
     const response = NextResponse.redirect(`${process.env.APP_URL}/dashboard`, { status: 302 });
+    
+    // Clear any existing token first
+    response.cookies.delete('userToken');
+    
+    // Set the new token
     response.cookies.set('userToken', jwt, {
       httpOnly: true,
       path: '/',
       maxAge: 60 * 60, // 1 hour
-      secure: true, // Always secure in production
-      sameSite: 'none' // Allow cross-site requests
+      secure: true,
+      sameSite: 'none'
     });
 
     return response;
