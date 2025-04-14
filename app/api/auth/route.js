@@ -253,7 +253,7 @@ export async function POST(request) {
       // 2D) Create JWT & set cookie
       let token;
       try {
-        token = sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        token = sign({ email }, process.env.JWT_SECRET, { expiresIn: '7d' });
       } catch (jwtErr) {
         console.error('JWT sign error:', jwtErr);
         return NextResponse.json(

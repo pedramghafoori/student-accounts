@@ -398,9 +398,13 @@ export default function DashboardPage() {
                                 </a>
                                 <a
                                   href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    router.push(`/add-ons?enrollmentId=${enr.Id}`);
+                                  }}
                                   className="text-blue-500 underline"
                                 >
-                                  Refund ({policyData?.refund})
+                                  Add Course Material
                                 </a>
                               </>
                             ) : (
@@ -408,9 +412,16 @@ export default function DashboardPage() {
                                 <span className="text-blue-300 underline">
                                   Reschedule ({policyData?.reschedule})
                                 </span>
-                                <span className="text-blue-300 underline">
-                                  Refund ({policyData?.refund})
-                                </span>
+                                <a
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    router.push(`/add-ons?enrollmentId=${enr.Id}`);
+                                  }}
+                                  className="text-blue-500 underline"
+                                >
+                                  Add Course Material
+                                </a>
                               </>
                             )}
                           </div>

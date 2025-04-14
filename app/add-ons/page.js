@@ -1,249 +1,271 @@
 "use client";
 
-import React, { useState, useEffect, useContext } from "react";
-import { useRouter } from "next/navigation";
-import { AppContext } from "../context/appcontext";
+import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../components/Header";
-import Image from 'next/image';
+import Image from "next/image";
 
 export default function AddOnProductsPage() {
   const router = useRouter();
-  const { selectedAccount } = useContext(AppContext);
+  const searchParams = useSearchParams();
 
-  // Local state
-  const [registrations, setRegistrations] = useState([]);
-  const [selectedRegistrationId, setSelectedRegistrationId] = useState("");
-  const [products, setProducts] = useState([]); // opportunity products
+  const enrollmentId = searchParams.get("enrollmentId");
+  console.log("[AddOnProductsPage] enrollmentId from URL:", enrollmentId);
+
+  const [products, setProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [totalCharge, setTotalCharge] = useState(0);
   const [loading, setLoading] = useState(false);
   const [transactionRef, setTransactionRef] = useState(null);
   const [error, setError] = useState(null);
+  const [required, setRequired] = useState([]);
+  const [optional, setOptional] = useState([]);
+  const [courseName, setCourseName] = useState("");
 
-  // 1. Fetch registrations (Opportunity records) from your existing route
-  // Note: you may need to ensure the route returns any associated 'OpportunityProducts'
   useEffect(() => {
-    // If no account is selected, possibly show an error or skip the fetch
-    if (!selectedAccount || !selectedAccount.Id) {
+    console.log("[AddOnProductsPage] Attempting to fetch add-ons by enrollmentId:", enrollmentId);
+    if (!enrollmentId) {
+      console.log("[AddOnProductsPage] No enrollmentId in URL, skipping fetch");
       return;
     }
 
-    // We assume your existing route is /api/transactions/registrations?accountId=...
-    // Make sure that route returns 'OpportunityProducts' with Family, Price, Description, etc.
-
-    const fetchRegistrations = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(
-          `/api/transactions/registrations?accountId=${selectedAccount.Id}`
-        );
+        console.log("[AddOnProductsPage] Fetching /api/addons?enrollmentId=", enrollmentId);
+        const res = await fetch(`/api/addons?enrollmentId=${enrollmentId}`);
         const data = await res.json();
-        if (data.success && data.records && data.records.length > 0) {
-          setRegistrations(data.records);
-          // By default, pick the first registration
-          const firstReg = data.records[0];
-          setSelectedRegistrationId(firstReg.Id);
-          // If your route includes 'OpportunityProducts' on each registration, filter them here
-          if (firstReg.OpportunityProducts) {
-            const filtered = firstReg.OpportunityProducts.filter(
-              (prod) =>
-                prod.Family === "Reference Materials" ||
-                prod.Family === "Resale Products"
-            );
-            setProducts(filtered);
-          }
-        } else {
-          setError(
-            data.message ||
-              "No registrations found or the route did not return the needed data."
-          );
+        console.log("[AddOnProductsPage] /api/addons response:", data);
+
+        if (!data.success) {
+          setError(data.message || "Failed to load.");
+          return;
         }
+
+        if (data.product2Record && data.product2Record.Name) {
+          console.log("[AddOnProductsPage] Setting courseName from product2Record:", data.product2Record.Name);
+          setCourseName(data.product2Record.Name);
+        }
+
+        console.log("[AddOnProductsPage] raw products from server:", data.products);
+        const allProducts = data.products || [];
+        console.log("[AddOnProductsPage] allProducts:", allProducts);
+
+        // 1) Right after we get "allProducts", map them to ensure they have isRequired/isOptional:
+        console.log("[AddOnProductsPage] All products before setting flags:", allProducts);
+
+        const processed = allProducts.map((p) => {
+          // Log the product as we process it
+          console.log("[AddOnProductsPage] Before flags =>", p);
+          // If backend didn't send isRequired/isOptional, derive from Family or something else
+          const hasNoFlags = (p.isRequired === undefined && p.isOptional === undefined);
+          if (hasNoFlags) {
+            // Example logic: treat 'Reference' as required, 'Resale Products' as optional
+            const isRef = p.Family === "Reference";
+            const isResale = p.Family === "Resale Products";
+            return {
+              ...p,
+              isRequired: isRef,
+              isOptional: isResale,
+            };
+          }
+          return p; // If flags exist, preserve them
+        });
+
+        console.log("[AddOnProductsPage] after adding flags:", processed);
+
+        const requiredProducts = processed.filter((p) => p.isRequired);
+        const optionalProducts = processed.filter((p) => p.isOptional);
+
+        // 2) Log them out
+        console.log("[AddOnProductsPage] requiredProducts =>", requiredProducts);
+        console.log("[AddOnProductsPage] optionalProducts =>", optionalProducts);
+
+        setRequired(requiredProducts);
+        setOptional(optionalProducts);
+        console.log("[AddOnProductsPage] setProducts with:", data.products);
       } catch (err) {
+        console.log("[AddOnProductsPage] Error fetching add-ons:", err);
         setError(err.message);
       }
     };
 
-    fetchRegistrations();
-  }, [selectedAccount]);
+    fetchData();
+  }, [enrollmentId]);
 
-  // 2. When user changes registration selection, reload the products
-  useEffect(() => {
-    if (!selectedRegistrationId || registrations.length === 0) {
+  const toggleSelectProduct = (product) => {
+    console.log("[AddOnProductsPage] toggleSelectProduct for:", product.Id);
+    if (product.alreadyPurchased) {
+      console.log("[AddOnProductsPage] Product already purchased. Skipping.");
       return;
     }
-    const foundReg = registrations.find((r) => r.Id === selectedRegistrationId);
-    if (foundReg && foundReg.OpportunityProducts) {
-      const filtered = foundReg.OpportunityProducts.filter(
-        (prod) =>
-          prod.Family === "Reference Materials" ||
-          prod.Family === "Resale Products"
-      );
-      setProducts(filtered);
-      setSelectedProducts([]);
-      setTotalCharge(0);
-    } else {
-      setProducts([]);
-      setSelectedProducts([]);
-      setTotalCharge(0);
-    }
-  }, [selectedRegistrationId, registrations]);
 
-  // 3. Toggle product selection
-  const toggleSelectProduct = (product) => {
     let updated;
-    if (selectedProducts.some((p) => p.id === product.id)) {
-      updated = selectedProducts.filter((p) => p.id !== product.id);
+    if (selectedProducts.some((p) => p.Id === product.Id)) {
+      updated = selectedProducts.filter((p) => p.Id !== product.Id);
+      console.log("[AddOnProductsPage] Removed product from cart:", product.Id);
     } else {
       updated = [...selectedProducts, product];
+      console.log("[AddOnProductsPage] Added product to cart:", product.Id);
     }
     setSelectedProducts(updated);
-    const total = updated.reduce(
-      (sum, prod) => sum + parseFloat(prod.price || 0),
-      0
-    );
+
+    const total = updated.reduce((sum, prod) => {
+      return sum + parseFloat(prod.UnitPrice || 0);
+    }, 0);
     setTotalCharge(total);
+    console.log("[AddOnProductsPage] Updated totalCharge:", total);
   };
 
-  // 4. Confirm purchase
   const confirmPurchase = async () => {
-    if (!selectedRegistrationId || selectedProducts.length === 0) {
+    console.log("[AddOnProductsPage] confirmPurchase with selected:", selectedProducts);
+    if (selectedProducts.length === 0) {
+      console.log("[AddOnProductsPage] No products selected. Aborting.");
       return;
     }
     setLoading(true);
     setError(null);
 
-    const productIds = selectedProducts.map((p) => p.id).join(",");
+    const productIds = selectedProducts.map((p) => p.Id).join(",");
+    console.log("[AddOnProductsPage] Building flow payload with productIds:", productIds);
+
     const payload = {
-      Opportunity_Id_Input: selectedRegistrationId,
+      Opportunity_Id_Input: "someOppId",
       Comma_Separated_Product_Ids_Input: productIds,
       Total_Add_On_Amount: totalCharge,
     };
 
     try {
+      console.log("[AddOnProductsPage] POST /api/invoke-flow with payload:", payload);
       const res = await fetch("/api/invoke-flow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const json = await res.json();
+      console.log("[AddOnProductsPage] /api/invoke-flow response:", json);
+
       if (json.success) {
         setTransactionRef(json.transactionReference);
       } else {
         setError(json.message || "Flow invocation failed");
       }
     } catch (err) {
+      console.log("[AddOnProductsPage] Error in confirmPurchase:", err);
       setError(err.message);
     }
     setLoading(false);
   };
 
-  // 5. Theming: Use a container and tailwind classes for styling to match your Dashboard page
   return (
     <>
-      {/* Bring in your Header from Dashboard's style, with matching props. */}
       <Header
-        headerTagline="Add-On Products"
-        selectedAccount={selectedAccount}
-        accounts={selectedAccount ? [selectedAccount] : []}
+        headerTagline="Course Materials"
+        selectedAccount={null}
+        accounts={[]}
         showAccountDropdown={false}
         setShowAccountDropdown={() => {}}
         handleSelect={() => {}}
-        handleLogout={() => router.push("/login")} // or your logout method
+        handleLogout={() => router.push("/login")}
+        courseName={courseName}
+        showBackButton={true}
       />
 
-      {/* Main content area, adopting similar tailwind classes */}
       <div className="p-6">
-        {error && (
-          <div className="text-red-600 mb-4">Error: {error}</div>
-        )}
+        {error && <div className="text-red-600 mb-4">Error: {error}</div>}
 
-        {selectedAccount ? (
-          <h1 className="text-2xl font-semibold mb-4">
-            Additional Purchases for {selectedAccount.Name}
-          </h1>
-        ) : (
-          <h1 className="text-2xl font-semibold mb-4">
-            Please select an account from the header
-          </h1>
-        )}
-
-        {/* Registration selection dropdown */}
-        {registrations.length > 0 && (
-          <div className="mb-6 bg-white shadow p-4 rounded">
-            <label htmlFor="registration-select" className="block font-semibold mb-2">
-              Select Registration
-            </label>
-            <select
-              id="registration-select"
-              value={selectedRegistrationId}
-              onChange={(e) => setSelectedRegistrationId(e.target.value)}
-              className="border border-gray-300 rounded p-2"
-            >
-              {registrations.map((reg) => (
-                <option key={reg.Id} value={reg.Id}>
-                  {reg.Name}
-                </option>
+        <div className="bg-white shadow p-2 rounded mb-6">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Summary:</h2>
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              {selectedProducts.map((product) => (
+                <div key={product.Id} className="flex items-center mb-1">
+                  <span className="text-sm">{product.Name}</span>
+                  <span className="text-sm text-gray-500 ml-2">
+                    {parseFloat(product.UnitPrice || 0).toFixed(2)}
+                  </span>
+                </div>
               ))}
-            </select>
+            </div>
+            <div className="flex flex-col items-center ml-4">
+              <button
+                disabled={loading || selectedProducts.length === 0}
+                onClick={confirmPurchase}
+                className={`px-4 py-2 rounded text-white ${
+                  loading || selectedProducts.length === 0
+                    ? "bg-gray-400"
+                    : "bg-[#1f2937] hover:bg-[#111827]"
+                }`}
+              >
+                {loading ? "Processing..." : "Reserve Material"}
+              </button>
+              <p className="text-xs text-gray-500 mt-1">
+                total: {parseFloat(totalCharge || 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[...required, ...optional].map((product) => {
+            const isInCart = selectedProducts.some((p) => p.Id === product.Id);
+            const isRequired = required.some((p) => p.Id === product.Id);
+            
+            return (
+              <div key={product.Id} className="bg-white border border-gray-200 rounded shadow p-4 flex flex-col h-full">
+                <div className="w-full mb-3">
+                  <Image
+                    src={product.ProductPicture__c || "/placeholder.png"}
+                    alt={product.Name}
+                    width={200}
+                    height={150}
+                    style={{ objectFit: "contain" }}
+                    className="w-full h-auto"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-semibold">{product.Name}</h3>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    isRequired 
+                      ? "border border-red-500 text-red-500" 
+                      : "border border-green-600 text-green-600"
+                  }`}>
+                    {isRequired ? "Required" : "Optional"}
+                  </span>
+                </div>
+
+                <p className="text-sm text-gray-600 mb-3 flex-grow">{product.Description}</p>
+
+                {product.alreadyPurchased ? (
+                  <p className="text-green-600 font-bold">Already Purchased</p>
+                ) : (
+                  <div className="mt-auto">
+                    <p className="text-sm text-gray-500 mb-3">
+                      {parseFloat(product.UnitPrice || 0).toFixed(2)}
+                    </p>
+                    <button
+                      onClick={() => toggleSelectProduct(product)}
+                      className={`w-full px-4 py-2 rounded text-white ${
+                        isInCart
+                          ? "bg-red-500 hover:bg-red-600"
+                          : "bg-blue-500 hover:bg-blue-600"
+                      }`}
+                    >
+                      {isInCart ? "Remove" : "Add"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {transactionRef && (
+          <div className="mt-4 p-4 border border-green-400 bg-green-50 rounded">
+            <h3 className="text-lg font-semibold">Transaction Successful!</h3>
+            <p>Transaction Reference: {transactionRef}</p>
           </div>
         )}
-
-        {/* Product grid display */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white border border-gray-200 rounded shadow p-4"
-            >
-              <div className="w-full h-40 mb-2 relative">
-                <Image
-                  src={product.ProductPicture__c}
-                  alt={product.name}
-                  fill
-                  style={{ objectFit: 'cover' }}
-                />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
-              <p className="text-gray-600 mb-2">{product.Description}</p>
-              <p className="font-bold mb-4">
-                Price: ${parseFloat(product.price || 0).toFixed(2)}
-              </p>
-              <button
-                onClick={() => toggleSelectProduct(product)}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                {selectedProducts.find((p) => p.id === product.id)
-                  ? "Remove"
-                  : "Add"}
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* Summary and confirm section */}
-        <div className="bg-white shadow p-4 rounded mt-6">
-          <h2 className="text-xl font-semibold">Order Summary</h2>
-          <p className="mt-2 mb-4 text-gray-800">
-            Total Charge: ${totalCharge.toFixed(2)}
-          </p>
-          <button
-            disabled={loading || selectedProducts.length === 0}
-            onClick={confirmPurchase}
-            className={`px-4 py-2 rounded text-white ${
-              loading || selectedProducts.length === 0
-                ? "bg-gray-400"
-                : "bg-green-600 hover:bg-green-700"
-            }`}
-          >
-            {loading ? "Processing..." : "Confirm Purchase"}
-          </button>
-
-          {transactionRef && (
-            <div className="mt-4 p-4 border border-green-400 bg-green-50 rounded">
-              <h3 className="text-lg font-semibold">Transaction Successful!</h3>
-              <p>Transaction Reference: {transactionRef}</p>
-            </div>
-          )}
-        </div>
       </div>
     </>
   );
