@@ -34,8 +34,8 @@ export async function GET(request) {
       instanceUrl: conn.instanceUrl
     });
 
-    // Redirect the user to the dashboard
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    // Redirect the user to the courses page
+    return NextResponse.redirect(new URL('/courses', request.url));
   } catch (error) {
     console.error('OAuth Callback Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

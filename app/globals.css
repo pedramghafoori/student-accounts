@@ -74,10 +74,8 @@
 }
 .header-wave-parent {
   position: relative;
-  /* The overall header background could be white or a very light color */
   background-color: #ffffff;
-  overflow: hidden; /* ensures the wave part doesn't overflow */
-  min-height: 200px; /* give some vertical space for your header content */
+  min-height: 200px;
 }
 
 .my-header {
@@ -85,16 +83,10 @@
   left: 0;
   bottom: 0;
   width: 100%;
-  /* make height bigger for a more pronounced wave */
   height: 200px;
-
-  /* the wave color: set to your blue */
   background-color: #14314c;
-
-  /* ellipse shape: 140% wide, 80% tall, centered horizontally at (50%),
-     but anchored at the bottom (100%) so it curves upward. */
-     clip-path: ellipse(80% 100% at 50% 0%);
-     z-index: 0;
+  clip-path: ellipse(80% 100% at 50% 0%);
+  z-index: 0;
 }
 .my-modal-forced-size {
   /* Force a fixed size in pixels */

@@ -49,26 +49,30 @@ function AddOnsContent() {
         console.log("[AddOnProductsPage] raw products from server:", data.products);
         const allProducts = data.products || [];
         console.log("[AddOnProductsPage] allProducts:", allProducts);
+        console.log("[AddOnProductsPage] courseCode from API:", data.courseCode);
 
-        // 1) Right after we get "allProducts", map them to ensure they have isRequired/isOptional:
-        console.log("[AddOnProductsPage] All products before setting flags:", allProducts);
-
+        // Process products with the courseCode from the API response
         const processed = allProducts.map((p) => {
           // Log the product as we process it
-          console.log("[AddOnProductsPage] Before flags =>", p);
-          // If backend didn't send isRequired/isOptional, derive from Family or something else
-          const hasNoFlags = (p.isRequired === undefined && p.isOptional === undefined);
-          if (hasNoFlags) {
-            // Example logic: treat 'Reference' as required, 'Resale Products' as optional
-            const isRef = p.Family === "Reference";
-            const isResale = p.Family === "Resale Products";
-            return {
-              ...p,
-              isRequired: isRef,
-              isOptional: isResale,
-            };
-          }
-          return p; // If flags exist, preserve them
+          console.log("[AddOnProductsPage] Processing product:", p.Name, "with Family:", p.Family);
+          console.log("[AddOnProductsPage] Products_Required__c:", p.Products_Required__c);
+          console.log("[AddOnProductsPage] Products_Optional__c:", p.Products_Optional__c);
+          
+          // Use the Products_Required__c and Products_Optional__c fields from Salesforce
+          const isRequired = p.Products_Required__c?.includes(data.courseCode) || false;
+          const isOptional = p.Products_Optional__c?.includes(data.courseCode) || false;
+          
+          // If a product is both required and optional, prioritize required
+          const finalStatus = {
+            isRequired,
+            isOptional: isOptional && !isRequired // Only optional if not required
+          };
+          
+          console.log("[AddOnProductsPage] Product:", p.Name, "finalStatus:", finalStatus);
+          return {
+            ...p,
+            ...finalStatus
+          };
         });
 
         console.log("[AddOnProductsPage] after adding flags:", processed);
@@ -82,7 +86,7 @@ function AddOnsContent() {
 
         setRequired(requiredProducts);
         setOptional(optionalProducts);
-        console.log("[AddOnProductsPage] setProducts with:", data.products);
+        setProducts(processed); // Set the processed products in the state
       } catch (err) {
         console.log("[AddOnProductsPage] Error fetching add-ons:", err);
         setError(err.message);

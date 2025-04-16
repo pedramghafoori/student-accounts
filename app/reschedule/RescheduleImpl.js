@@ -135,7 +135,7 @@ export function RescheduleImpl() {
 
   function handleKeepCurrent() {
     console.log("Keeping current course, no reschedule.");
-    router.push("/dashboard");
+    router.push("/courses");
   }
 
   function handleRescheduleClick(course) {
@@ -327,10 +327,10 @@ export function RescheduleImpl() {
             </p>
           </div>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/courses')}
             className="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
-            Go to Dashboard
+            Go to Courses
           </button>
         </div>
       )}

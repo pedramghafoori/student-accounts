@@ -87,7 +87,7 @@ function LoginContent() {
       if (response.data.success) {
         setAccountId(response.data.accountId);
         setStatus("Success! Redirecting...");
-        router.push("/dashboard");
+        router.push("/courses");
       } else {
         setStatus(response.data.message || "Invalid OTP");
       }

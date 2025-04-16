@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verify } from 'jsonwebtoken';
 import jsforce from 'jsforce';
-
-// Example: Suppose you import a helper that returns your stored tokens.
 import { getOAuth2 } from '@/lib/salesforce';
 import redisClient from '@/lib/redisClient';
 
@@ -21,14 +19,13 @@ export async function GET(request) {
       return NextResponse.json({ success: true, message: 'HEAD request, token NOT used' });
     }
 
-    console.log("Starting GET /api/salesforce route");
+    console.log("Starting GET /api/salesforce/account route");
     // 1) Retrieve the JWT from our cookie
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const token = cookieStore.get('userToken')?.value;
     console.log("JWT token from cookie:", token);
     if (!token) {
       console.error("No user token found in cookies");
-      // Redirect the user to login with a reason parameter indicating token expiration
       return NextResponse.redirect(new URL('/login?reason=expired', request.url));
     }
 
@@ -39,7 +36,6 @@ export async function GET(request) {
       console.log("Token decoded successfully:", decoded);
     } catch (err) {
       console.error("Token verification failed:", err);
-      // If token verification fails (likely because of expiration), redirect to login.
       return NextResponse.redirect(new URL('/login?reason=expired', request.url));
     }
 
@@ -73,7 +69,7 @@ export async function GET(request) {
     });
     console.log("Created Salesforce connection with tokens");
 
-    // 5) Query Salesforce for the Account record using PersonEmail on the Account object (Person Account)
+    // 5) Query Salesforce for the Account record using PersonEmail
     const accountQuery = `
           SELECT Id, Name, PersonEmail, Phone, PersonBirthdate,
                  Emergency_Contact_Name__pc, Emergency_Contact_Number__c,
@@ -106,10 +102,10 @@ export async function GET(request) {
       return NextResponse.json({ success: true, account });
     }
   } catch (error) {
-    console.error("Salesforce Error in GET /api/salesforce route:", error);
+    console.error("Salesforce Error in GET /api/salesforce/account route:", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }
     );
   }
-}
+} 

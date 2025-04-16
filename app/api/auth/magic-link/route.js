@@ -47,7 +47,7 @@ export async function GET(request) {
   }
 }
 
-// POST = Step 2: Mark token used, create JWT, set cookie, redirect to /dashboard
+// POST = Step 2: Mark token used, create JWT, set cookie, redirect to /courses
 export async function POST(request) {
   try {
     // 1) Parse form data. This is a standard Form submission.
@@ -94,8 +94,8 @@ export async function POST(request) {
       { expiresIn: '1h' }
     );
 
-    // 5) Redirect user to /dashboard, setting userToken cookie
-    const response = NextResponse.redirect(`${process.env.APP_URL}/dashboard`, { status: 302 });
+    // 5) Redirect user to /courses, setting userToken cookie
+    const response = NextResponse.redirect(`${process.env.APP_URL}/courses`, { status: 302 });
     
     // Clear any existing token first
     response.cookies.delete('userToken');

@@ -88,14 +88,22 @@ export default function Header({
       {showAccountDropdown && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-          style={{ zIndex: 999 }}
+          style={{ 
+            zIndex: 9999,
+            position: 'fixed',
+            minHeight: '100vh',
+            width: '100vw'
+          }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setShowAccountDropdown(false);
             }
           }}
         >
-            <div className="my-modal-forced-size">
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md mx-4"
+            style={{ position: 'relative', zIndex: 10000 }}
+          >
             <h2 className="text-xl font-bold mb-2 text-center">Accounts</h2>
             <p className="text-sm text-center text-gray-500 mb-4">
               The accounts below are associated with your email address.
@@ -108,14 +116,13 @@ export default function Header({
                     handleSelect(acc.Id);
                     setShowAccountDropdown(false);
                   }}
-                  style={{ padding: "0.5rem" }}
-                  className="border rounded-lg mb-2 cursor-pointer hover:bg-blue-50"
+                  className="border rounded-lg p-4 mb-2 cursor-pointer hover:bg-blue-50"
                 >
                   <h2 className="text-base">{acc.Name}</h2>
                 </div>
               ))}
             </div>
-            <div className="mt-2 border-t pt-2 text-center">
+            <div className="mt-4 border-t pt-4 text-center">
               <button
                 onClick={handleLogout}
                 className="text-sm text-blue-500 hover:underline"

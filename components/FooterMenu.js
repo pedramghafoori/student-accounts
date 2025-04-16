@@ -14,10 +14,10 @@ export default function FooterMenu({ allUserAccounts = [] }) {
       <div className="footer-nav-items">
         {/* Dashboard */}
         <Link
-          href="/dashboard"
+          href="/courses"
           className="footer-menu-item flex flex-col items-center text-xs"
         >
-          {isActive("/dashboard") ? (
+          {isActive("/courses") ? (
             <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22.8516 17.9395" width="24" height="24">
               <g>
                 <rect height="17.9395" opacity="0" width="22.8516" x="0" y="0"/>
@@ -32,7 +32,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
               </g>
             </svg>
           )}
-          <span className={`footer-menu-label ${isActive("/dashboard") ? "text-blue-500" : "text-white"}`}>Courses</span>
+          <span className={`footer-menu-label ${isActive("/courses") ? "text-blue-500" : "text-white"}`}>Courses</span>
         </Link>
 
         {/* Receipts */}

@@ -9,9 +9,9 @@ export default function Home() {
   const cookieStore = cookies();
   const userToken = cookieStore.get("userToken"); // e.g. { name: 'userToken', value: '...' }
 
-  // If a userToken cookie is present, redirect to the dashboard.
+  // If a userToken cookie is present, redirect to the courses page.
   if (userToken) {
-    redirect("/dashboard");
+    redirect("/courses");
   } else {
     // Otherwise, redirect to the login page with a reason flag.
     redirect("/login?reason=inactive");

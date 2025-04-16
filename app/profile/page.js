@@ -12,6 +12,33 @@ export default function ProfilePage() {
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   useEffect(() => {
+    console.log('Selected Account:', selectedAccount);
+    console.log('All Accounts:', allAccounts);
+    
+    if (selectedAccount) {
+      console.log('Date of Birth:', {
+        raw: selectedAccount.PersonBirthdate,
+        formatted: formatDate(selectedAccount.PersonBirthdate)
+      });
+      
+      // Log emergency contact details
+      console.log('Emergency Contact:', {
+        name: selectedAccount.Emergency_Contact_Name__pc,
+        number: selectedAccount.Emergency_Contact_Number__c,
+        raw: selectedAccount
+      });
+      
+      // Log mailing address details
+      console.log('Mailing Address:', {
+        raw: selectedAccount.PersonMailingAddress,
+        street: selectedAccount.PersonMailingStreet,
+        city: selectedAccount.PersonMailingCity,
+        state: selectedAccount.PersonMailingState,
+        postalCode: selectedAccount.PersonMailingPostalCode,
+        country: selectedAccount.PersonMailingCountry
+      });
+    }
+    
     if (!selectedAccount && allAccounts && allAccounts.length > 0) {
       setSelectedAccount(allAccounts[0]);
     }
@@ -20,6 +47,7 @@ export default function ProfilePage() {
 
   const handleSelect = (id) => {
     const selected = allAccounts.find(acc => acc.Id === id);
+    console.log('Selected Account Details:', selected);
     setSelectedAccount(selected);
   };
 
@@ -29,8 +57,13 @@ export default function ProfilePage() {
   };
 
   const formatDate = (dateString) => {
+    console.log('Date String:', dateString);
     if (!dateString) return "Not available";
-    const date = new Date(dateString);
+    
+    // Split the date string and create a date object in local timezone
+    const [year, month, day] = dateString.split('-');
+    const date = new Date(year, month - 1, day); // month is 0-indexed in JavaScript
+    
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -38,10 +71,21 @@ export default function ProfilePage() {
     });
   };
 
-  const formatAddress = (address) => {
-    if (!address) return "Not available";
-    const { street, city, state, postalCode, country } = address;
-    return `${street || ''}\n${city || ''}, ${state || ''} ${postalCode || ''}\n${country || ''}`;
+  const formatAddress = (account) => {
+    console.log('Formatting Address for Account:', account);
+    if (!account) return "Not available";
+    
+    // Check individual address fields
+    const street = account.PersonMailingStreet || account.PersonMailingAddress?.street;
+    const city = account.PersonMailingCity || account.PersonMailingAddress?.city;
+    const state = account.PersonMailingState || account.PersonMailingAddress?.state;
+    const postalCode = account.PersonMailingPostalCode || account.PersonMailingAddress?.postalCode;
+    const country = account.PersonMailingCountry || account.PersonMailingAddress?.country;
+    
+    console.log('Address Components:', { street, city, state, postalCode, country });
+    
+    const parts = [street, city, state, postalCode, country].filter(Boolean);
+    return parts.join(', ') || "Not available";
   };
 
   if (loading) {
@@ -142,7 +186,7 @@ export default function ProfilePage() {
 
             <div className="border-b pb-4">
               <h2 className="text-sm font-medium text-gray-500 mb-1">Emergency Contact</h2>
-              <p className="text-lg text-gray-800">{selectedAccount?.Emergency_Contact_Name__c || "Not available"}</p>
+              <p className="text-lg text-gray-800">{selectedAccount?.Emergency_Contact_Name__pc || "Not available"}</p>
               <p className="text-sm text-gray-600">{selectedAccount?.Emergency_Contact_Number__c || "Not available"}</p>
             </div>
 
@@ -154,7 +198,7 @@ export default function ProfilePage() {
             <div>
               <h2 className="text-sm font-medium text-gray-500 mb-1">Mailing Address</h2>
               <p className="text-lg text-gray-800 whitespace-pre-line">
-                {formatAddress(selectedAccount?.PersonMailingAddress)}
+                {formatAddress(selectedAccount)}
               </p>
             </div>
           </div>

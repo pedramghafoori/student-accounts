@@ -159,6 +159,7 @@ export async function GET(request) {
     console.log('=> [GET] Building final product query with course code:', courseCode);
     const productQuery = `
       SELECT Id, Name, Family, Description, ProductPicture__c,
+             Products_Required__c, Products_Optional__c,
              (SELECT Id, UnitPrice, Pricebook2.Name 
               FROM PricebookEntries 
               WHERE Pricebook2.Name = 'Standard Price Book' 

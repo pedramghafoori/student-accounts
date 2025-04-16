@@ -24,8 +24,8 @@ function ConfirmContent() {
 
       const data = await response.json();
       
-      // Redirect to dashboard after successful confirmation
-      router.push('/dashboard');
+      // Redirect to courses after successful confirmation
+      router.push('/courses');
       
     } catch (error) {
       console.error('Error confirming login:', error);
