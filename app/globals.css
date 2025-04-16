@@ -16,12 +16,13 @@
   position: fixed;
   /* Slight gap from the bottom to "hover" up a bit */
   bottom: 1.5rem;
-  left: 0;
-  width: calc(100% - 2rem); /* So it has a small margin on left/right */
-  margin: 0 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%; /* Changed from calc(100% - 2rem) to 50% */
+  margin: 0 auto;
   z-index: 9999; /* keep above other elements if necessary */
   background-color: #1f2937; /* dark background */
-  border-radius: 1rem; /* slightly rounded corners */
+  border-radius: 4rem; /* Changed from 1rem to 2rem for more rounded corners */
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   display: flex;
   justify-content: center;
@@ -31,7 +32,7 @@
 
 /* When the user hovers over the footer, it moves up a bit */
 .footer-nav:hover {
-  transform: translateY(-0.5rem);
+  transform: translate(-50%, -0.5rem);
 }
 
 .footer-nav-items {
