@@ -15,12 +15,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
         {/* Dashboard */}
         <Link
           href="/dashboard"
-          className={`
-            footer-menu-item
-            flex flex-col items-center
-            text-xs            /* smaller text */
-            ${isActive("/dashboard") ? "border-1 border-blue-500 rounded-full p-1" : ""}
-          `}
+          className="footer-menu-item flex flex-col items-center text-xs"
         >
           {isActive("/dashboard") ? (
             <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22.8516 17.9395" width="24" height="24">
@@ -37,77 +32,13 @@ export default function FooterMenu({ allUserAccounts = [] }) {
               </g>
             </svg>
           )}
-          <span className="footer-menu-label">Courses</span>
+          <span className={`footer-menu-label ${isActive("/dashboard") ? "text-blue-500" : "text-white"}`}>Courses</span>
         </Link>
-
-        {/* Accounts */}
-        <div
-          className={`
-            footer-menu-item
-            footer-dropdown
-            relative group
-            flex flex-col items-center
-            text-xs
-            ${isActive("/accounts") ? "border-2 border-blue-500 rounded-full p-1" : ""}
-          `}
-        >
-          <Link href="/past-courses" className="flex flex-col items-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-4 h-4 mb-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth="2"
-              stroke="currentColor"
-            >
-              <circle cx="12" cy="7" r="5" />
-              <path d="M4 22c1-7 6-10 8-10s7 3 8 10" />
-            </svg>
-            <span className="footer-menu-label">Past Courses</span>
-          </Link>
-
-          {/* Hover dropdown content */}
-          <div
-            className="
-              hidden
-              group-hover:block
-              absolute
-              bottom-full
-              left-1/2
-              -translate-x-1/2
-              mb-2
-              bg-white
-              text-black
-              border
-              border-gray-200
-              shadow-lg
-              rounded
-              p-2
-              w-48
-            "
-          >
-            <p className="text-xs text-gray-500 mb-2">Switch Account:</p>
-            {allUserAccounts.map((account) => (
-              <a
-                key={account.id}
-                href={`/accounts/switch/${account.id}`}
-                className="block px-2 py-1 hover:bg-gray-100 rounded text-sm"
-              >
-                {account.displayName}
-              </a>
-            ))}
-          </div>
-        </div>
 
         {/* Transactions */}
         <Link
           href="/transactions"
-          className={`
-            footer-menu-item
-            flex flex-col items-center
-            text-xs
-            ${isActive("/transactions") ? "border-2 border-blue-500 rounded-full p-1" : ""}
-          `}
+          className="footer-menu-item flex flex-col items-center text-xs"
         >
           {isActive("/transactions") ? (
             <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23.3105 16.6895" width="24" height="24">
@@ -124,17 +55,13 @@ export default function FooterMenu({ allUserAccounts = [] }) {
               </g>
             </svg>
           )}
-          <span className="footer-menu-label">Transactions</span>
+          <span className={`footer-menu-label ${isActive("/transactions") ? "text-blue-500" : "text-white"}`}>Transactions</span>
         </Link>
 
         {/* Profile */}
         <Link
           href="/profile"
-          className={`
-            footer-menu-item
-            flex flex-col items-center
-            text-xs
-          `}
+          className="footer-menu-item flex flex-col items-center text-xs"
         >
           {isActive("/profile") ? (
             <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20.2832 19.9316" width="24" height="24">
@@ -151,7 +78,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
               </g>
             </svg>
           )}
-          <span className="footer-menu-label">Profile</span>
+          <span className={`footer-menu-label ${isActive("/profile") ? "text-blue-500" : "text-white"}`}>Profile</span>
         </Link>
       </div>
     </nav>
