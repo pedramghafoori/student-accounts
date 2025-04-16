@@ -219,7 +219,7 @@ function AddOnsContent() {
                     width={200}
                     height={150}
                     style={{ objectFit: "contain" }}
-                    className="w-full h-auto"
+                    className="w-full h-32 sm:h-auto"
                   />
                 </div>
                 

@@ -250,10 +250,39 @@ export async function POST(request) {
         );
       }
 
-      // 2D) Create JWT & set cookie
+      // 2D) Get the account ID from Salesforce
+      let accountId;
+      try {
+        const tokens = await getSystemTokensFromRedis();
+        const conn = new jsforce.Connection({
+          oauth2: getOAuth2(),
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          instanceUrl: tokens.instanceUrl,
+        });
+
+        const result = await conn.query(`
+          SELECT Id
+          FROM Account
+          WHERE PersonEmail = '${email}'
+          LIMIT 1
+        `);
+
+        if (result.totalSize > 0) {
+          accountId = result.records[0].Id;
+        }
+      } catch (err) {
+        console.error('Error getting account ID:', err);
+        return NextResponse.json(
+          { success: false, message: 'Failed to get account ID' },
+          { status: 500 }
+        );
+      }
+
+      // 2E) Create JWT & set cookie
       let token;
       try {
-        token = sign({ email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        token = sign({ email, accountId }, process.env.JWT_SECRET, { expiresIn: '7d' });
       } catch (jwtErr) {
         console.error('JWT sign error:', jwtErr);
         return NextResponse.json(
@@ -262,7 +291,12 @@ export async function POST(request) {
         );
       }
 
-      const response = NextResponse.json({ success: true, message: 'OTP verified' });
+      const response = NextResponse.json({
+        success: true,
+        message: 'OTP verified successfully',
+        accountId
+      });
+
       response.cookies.set({
         name: 'userToken',
         value: token,
@@ -425,6 +459,127 @@ export async function POST(request) {
       }
 
       return NextResponse.json({ success: true, message: 'Magic link sent' });
+    }
+
+    // ----------------------
+    // 4) VERIFY MAGIC LINK
+    // ----------------------
+    if (action === 'verify-magic-link') {
+      if (!email) {
+        return NextResponse.json(
+          { success: false, message: 'Email is required' },
+          { status: 400 }
+        );
+      }
+
+      // 4A) Find magic link record in Postgres
+      let record;
+      try {
+        record = await prisma.magicLink.findFirst({
+          where: { email, used: false },
+        });
+      } catch (dbErr) {
+        console.error('DB error finding magic link record:', dbErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to query magic link record' },
+          { status: 500 }
+        );
+      }
+
+      if (!record) {
+        return NextResponse.json(
+          { success: false, message: 'No magic link found for this email' },
+          { status: 400 }
+        );
+      }
+
+      // 4B) Check expiry
+      if (new Date() > record.expiresAt) {
+        try {
+          await prisma.magicLink.update({
+            where: { id: record.id },
+            data: { used: true },
+          });
+        } catch (dbErr) {
+          console.error('DB error marking expired magic link as used:', dbErr);
+        }
+        return NextResponse.json(
+          { success: false, message: 'Magic link expired' },
+          { status: 401 }
+        );
+      }
+
+      // 4C) Mark magic link as used if valid
+      try {
+        await prisma.magicLink.update({
+          where: { id: record.id },
+          data: { used: true },
+        });
+      } catch (dbErr) {
+        console.error('DB error marking magic link as used:', dbErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to mark magic link as used' },
+          { status: 500 }
+        );
+      }
+
+      // 4D) Get the account ID from Salesforce
+      let accountId;
+      try {
+        const tokens = await getSystemTokensFromRedis();
+        const conn = new jsforce.Connection({
+          oauth2: getOAuth2(),
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          instanceUrl: tokens.instanceUrl,
+        });
+
+        const result = await conn.query(`
+          SELECT Id
+          FROM Account
+          WHERE PersonEmail = '${record.email}'
+          LIMIT 1
+        `);
+
+        if (result.totalSize > 0) {
+          accountId = result.records[0].Id;
+        }
+      } catch (err) {
+        console.error('Error getting account ID:', err);
+        return NextResponse.json(
+          { success: false, message: 'Failed to get account ID' },
+          { status: 500 }
+        );
+      }
+
+      // 4E) Create JWT & set cookie
+      let token;
+      try {
+        token = sign({ email: record.email, accountId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      } catch (jwtErr) {
+        console.error('JWT sign error:', jwtErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to create auth token' },
+          { status: 500 }
+        );
+      }
+
+      const response = NextResponse.json({
+        success: true,
+        message: 'Magic link verified successfully',
+        accountId
+      });
+
+      response.cookies.set({
+        name: 'userToken',
+        value: token,
+        httpOnly: true,
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7,
+        secure: process.env.NODE_ENV === 'production',
+      });
+
+      return response;
     }
 
     // ----------------------

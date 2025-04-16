@@ -1,10 +1,11 @@
 "use client";
 
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 
 function ConfirmContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const token = searchParams.get('token');
 
   const handleConfirm = async () => {
@@ -21,7 +22,11 @@ function ConfirmContent() {
         throw new Error('Failed to confirm login');
       }
 
-      // The API will handle the redirect
+      const data = await response.json();
+      
+      // Redirect to dashboard after successful confirmation
+      router.push('/dashboard');
+      
     } catch (error) {
       console.error('Error confirming login:', error);
     }

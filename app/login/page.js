@@ -3,9 +3,11 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import axios from "axios";
+import { useAccount } from "../context/AccountContext";
 
 // This component contains all the login logic and uses the useSearchParams hook
 function LoginContent() {
+  const { setAccountId } = useAccount();
   // Read query parameters for a logout reason
   const searchParams = useSearchParams();
   const reason = searchParams.get("reason"); // e.g., 'inactive'
@@ -13,7 +15,7 @@ function LoginContent() {
 
   useEffect(() => {
     if (reason === "inactive") {
-      setLogoutMessage("You’ve been logged out due to inactivity. Please log in again.");
+      setLogoutMessage("You've been logged out due to inactivity. Please log in again.");
     }
   }, [reason]);
 
@@ -81,9 +83,14 @@ function LoginContent() {
   const handleVerifyOtp = async () => {
     try {
       setStatus("Verifying OTP...");
-      await axios.post("/api/auth", { action: "verify-otp", email, otp });
-      setStatus("Success! Redirecting...");
-      router.push("/dashboard");
+      const response = await axios.post("/api/auth", { action: "verify-otp", email, otp });
+      if (response.data.success) {
+        setAccountId(response.data.accountId);
+        setStatus("Success! Redirecting...");
+        router.push("/dashboard");
+      } else {
+        setStatus(response.data.message || "Invalid OTP");
+      }
     } catch (err) {
       setStatus("Invalid OTP or error: " + err.message);
     }
@@ -93,10 +100,15 @@ function LoginContent() {
     try {
       setStatus("Sending magic link...");
       setEmailError(false);
-      await axios.post("/api/auth", { action: "send-magic-link", email });
-      setStatus("Magic link sent! Check your email.");
-      setMagicLinkSent(true);
-      setMagicLinkCountdown(15);
+      const response = await axios.post("/api/auth", { action: "send-magic-link", email });
+      if (response.data.success) {
+        setAccountId(response.data.accountId);
+        setStatus("Magic link sent! Check your email.");
+        setMagicLinkSent(true);
+        setMagicLinkCountdown(15);
+      } else {
+        setStatus(response.data.message || "Failed to send magic link");
+      }
     } catch (err) {
       if (err.response) {
         if (err.response.status === 400) {
@@ -146,7 +158,7 @@ function LoginContent() {
 
           {step === "EMAIL" && (
             <p className="text-center text-sm text-gray-600 mb-8">
-              Please enter the email you used during registration, and we’ll send you a link or OTP.
+              Please enter the email you used during registration, and we'll send you a link or OTP.
             </p>
           )}
 

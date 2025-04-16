@@ -115,6 +115,7 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [sessionExpired, setSessionExpired] = useState(false);
   const [selectedEnrollments, setSelectedEnrollments] = useState([]);
+  const [tab, setTab] = useState("active");
   
   // Destructure context values
   const { selectedAccount: globalAccount, updateGlobalSelectedAccount } = useContext(AppContext);
@@ -230,6 +231,7 @@ export default function DashboardPage() {
     error,
   });
   const upcomingCourses = batches.filter((enr) => enr.DaysUntilStart >= 0);
+  const pastCourses = batches.filter((enr) => enr.DaysUntilStart < 0);
 
   // If there's a Bronze Cross standard enrollment
   const bronzeCrossEnrollment = batches.find(
@@ -243,7 +245,7 @@ export default function DashboardPage() {
     <>
     
       <Header
-        headerTagline="Upcoming Course"     //  <--- dynamic tagline
+        headerTagline="Courses"
         selectedAccount={selectedAccount}
         accounts={accounts}
         showAccountDropdown={showAccountDropdown}
@@ -256,197 +258,392 @@ export default function DashboardPage() {
 
       {/* MAIN DASHBOARD CONTENT */}
       <div className="p-6">
-        {error && <p className="text-red-600 mb-4">{error}</p>}
+        {/* Tab Switcher */}
+        <div className="flex bg-gray-100 rounded-xl w-full max-w-xl mb-8 mx-auto">
+          {[
+            { key: "active", label: "Active" },
+            { key: "completed", label: "Completed" },
+          ].map((t, idx) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex-1 py-3 text-lg font-medium transition-all duration-300
+                ${tab === t.key ? "bg-white shadow rounded-xl" : ""}
+                ${idx === 0 ? "rounded-l-xl" : ""}
+                ${idx === 1 ? "rounded-r-xl" : ""}
+                ${idx === 1 ? "border-l border-gray-300" : ""}
+              `}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {/* Animated Tab Content (CSS-based) */}
+        <div className="relative min-h-[200px]">
+          <div
+            className={`transition-all duration-500 absolute w-full top-0 left-0
+              ${tab === "active" ? "opacity-100 translate-x-0 z-10" : "opacity-0 -translate-x-10 pointer-events-none z-0"}
+            `}
+          >
+            {tab === "active" && (
+              <div>
+                {/* Active/Upcoming Courses Content */}
+                {selectedAccount ? (
+                  <>
+                    <h1 className="text-3xl font-semibold mb-6">{selectedAccount.Name}</h1>
+                    <div className="bg-white shadow p-6 rounded-lg">
+                      {upcomingCourses.length > 0 ? (
+                        upcomingCourses.map((enr) => {
+                          let displayedCourseName = "";
+                          let displayedDates = "";
+                          let displayedLocation = "";
+                          let displayedDaysUntilStart = enr.DaysUntilStart;
 
-        {selectedAccount ? (
-          <h1 className="text-3xl font-semibold mb-6">
-            {selectedAccount.Name}
-          </h1>
-        ) : (
-          <h1 className="text-3xl font-semibold mb-6">
-            Please select a student from above
-          </h1>
-        )}
+                          // For combo or standard
+                          if (enr.isCombo) {
+                            // Example: Bronze Combo
+                            if (
+                              enr.CourseName &&
+                              enr.CourseName.includes("Bronze Combo")
+                            ) {
+                              displayedCourseName = "Bronze Combo";
+                              // Maybe find a Bronze Cross enrollment
+                              const bronzeCrossEnrollment = batches.find(
+                                (course) =>
+                                  !course.isCombo &&
+                                  course.CourseName?.includes("Bronze Cross")
+                              );
+                              if (bronzeCrossEnrollment) {
+                                const parsed = parseBronzeClassroom(
+                                  bronzeCrossEnrollment.Classroom || ""
+                                );
+                                displayedDates = parsed.date;
+                                displayedLocation = parsed.location;
+                                displayedDaysUntilStart =
+                                  bronzeCrossEnrollment.DaysUntilStart;
+                              } else {
+                                // fallback
+                                const parsed = parseBronzeClassroom(
+                                  enr.Classroom || ""
+                                );
+                                displayedDates = parsed.date;
+                                displayedLocation = parsed.location;
+                              }
+                            } else {
+                              // other combos
+                              const parsed = parseCourseName(
+                                enr.Registration_Name__c || ""
+                              );
+                              displayedCourseName =
+                                parsed.course || "Untitled Course";
+                              displayedDates = parsed.courseDates;
+                              displayedLocation = parsed.location;
+                            }
+                          } else {
+                            // standard enrollment
+                            const { courseDates, course, location } = parseCourseName(
+                              enr.CourseName
+                            );
+                            displayedCourseName = course || "Untitled Course";
+                            displayedDates = courseDates || enr.CourseDates;
+                            displayedLocation = location || enr.Location;
+                          }
 
-        <div className="bg-white shadow p-6 rounded-lg">
-          {selectedAccount ? (
-            upcomingCourses.length > 0 ? (
-              <>
-                {upcomingCourses.map((enr) => {
-                  let displayedCourseName = "";
-                  let displayedDates = "";
-                  let displayedLocation = "";
-                  let displayedDaysUntilStart = enr.DaysUntilStart;
+                          // policy details
+                          const policyData =
+                            policy && getPolicyForCourse(displayedDaysUntilStart, policy);
 
-                  // For combo or standard
-                  if (enr.isCombo) {
-                    // Example: Bronze Combo
-                    if (
-                      enr.CourseName &&
-                      enr.CourseName.includes("Bronze Combo")
-                    ) {
-                      displayedCourseName = "Bronze Combo";
-                      // Maybe find a Bronze Cross enrollment
-                      const bronzeCrossEnrollment = batches.find(
-                        (course) =>
-                          !course.isCombo &&
-                          course.CourseName?.includes("Bronze Cross")
-                      );
-                      if (bronzeCrossEnrollment) {
-                        const parsed = parseBronzeClassroom(
-                          bronzeCrossEnrollment.Classroom || ""
-                        );
-                        displayedDates = parsed.date;
-                        displayedLocation = parsed.location;
-                        displayedDaysUntilStart =
-                          bronzeCrossEnrollment.DaysUntilStart;
-                      } else {
-                        // fallback
-                        const parsed = parseBronzeClassroom(
-                          enr.Classroom || ""
-                        );
-                        displayedDates = parsed.date;
-                        displayedLocation = parsed.location;
-                      }
-                    } else {
-                      // other combos
-                      const parsed = parseCourseName(
-                        enr.Registration_Name__c || ""
-                      );
-                      displayedCourseName =
-                        parsed.course || "Untitled Course";
-                      displayedDates = parsed.courseDates;
-                      displayedLocation = parsed.location;
-                    }
-                  } else {
-                    // standard enrollment
-                    const { courseDates, course, location } = parseCourseName(
-                      enr.CourseName
-                    );
-                    displayedCourseName = course || "Untitled Course";
-                    displayedDates = courseDates || enr.CourseDates;
-                    displayedLocation = location || enr.Location;
-                  }
-
-                  // policy details
-                  const policyData =
-                    policy && getPolicyForCourse(displayedDaysUntilStart, policy);
-
-                  return (
-                    <div
-                      key={enr.Id}
-                      className="card mb-4 p-4 border border-gray-300 rounded-md"
-                    >
-                      <div className="card-header">
-                        <span className="text-[#0070d9] font-bold text-lg">
-                          {displayedCourseName}
-                        </span>
-                      </div>
-                      <div className="card-body mt-3">
-                        <div className="flex items-center justify-between flex-wrap gap-6 mt-2">
-                          <div className="flex items-center gap-6">
-                            <div className="flex items-center">
-                              <span className="mr-2">📅</span>
-                              {displayedDates}
-                            </div>
-                            <div className="flex items-center">
-                              <span className="mr-2">📍</span>
-                              {displayedLocation}
-                            </div>
-                            <div className="flex items-center">
-                              <span className="mr-2">⏰</span>
-                              {displayedDaysUntilStart < 0
-                                ? "Course has passed"
-                                : formatDays(displayedDaysUntilStart)}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4 text-xs">
-                            {displayedDaysUntilStart >
-                            (policy?.daysBeforeReschedule ?? 0) ? (
-                              <>
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    // Toggle the enrollment in selectedEnrollments
-                                    let newEnrollments = [...selectedEnrollments];
-                                    const existingIndex = newEnrollments.findIndex(
-                                      (obj) => obj.Id === enr.Id
-                                    );
-                                    if (existingIndex !== -1) {
-                                      newEnrollments = newEnrollments.filter(
-                                        (obj) => obj.Id !== enr.Id
-                                      );
-                                    } else {
-                                      newEnrollments.push({ Id: enr.Id });
-                                    }
-                                    setSelectedEnrollments(newEnrollments);
-
-                                    const courseName =
-                                      displayedCourseName ||
-                                      enr.CourseName ||
-                                      "Unknown course";
-
-                                    router.push(
-                                      `/reschedule?courseType=${encodeURIComponent(courseName)}&oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.BatchId}&enrollmentId=${enr.Id}&enrollmentIds=${JSON.stringify(newEnrollments)}&oldCourseLocation=${encodeURIComponent(displayedLocation)}&oldCourseStartDate=${encodeURIComponent(enr.Start_date_time__c || '')}`
-                                    );
-                                  }}
-                                  className="text-blue-500 underline"
-                                >
-                                  Reschedule ({policyData?.reschedule})
-                                </a>
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    router.push(`/add-ons?enrollmentId=${enr.Id}`);
-                                  }}
-                                  className="text-blue-500 underline"
-                                >
-                                  Add Course Material
-                                </a>
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-blue-300 underline">
-                                  Reschedule ({policyData?.reschedule})
+                          return (
+                            <div
+                              key={enr.Id}
+                              className="card mb-4 p-4 border border-gray-300 rounded-md"
+                            >
+                              <div className="card-header">
+                                <span className="text-[#0070d9] font-bold text-lg">
+                                  {displayedCourseName}
                                 </span>
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    router.push(`/add-ons?enrollmentId=${enr.Id}`);
-                                  }}
-                                  className="text-blue-500 underline"
-                                >
-                                  Add Course Material
-                                </a>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                              </div>
+                              <div className="card-body mt-3">
+                                <div className="flex items-center justify-between flex-wrap gap-6 mt-2">
+                                  <div className="flex items-center gap-6">
+                                    <div className="flex items-center">
+                                      <span className="mr-2">📅</span>
+                                      {displayedDates}
+                                    </div>
+                                    <div className="flex items-center">
+                                      <span className="mr-2">📍</span>
+                                      {displayedLocation}
+                                    </div>
+                                    <div className="flex items-center">
+                                      <span className="mr-2">⏰</span>
+                                      {displayedDaysUntilStart < 0
+                                        ? "Course has passed"
+                                        : formatDays(displayedDaysUntilStart)}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-4 text-xs">
+                                    {displayedDaysUntilStart >
+                                    (policy?.daysBeforeReschedule ?? 0) ? (
+                                      <>
+                                        <a
+                                          href="#"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            // Toggle the enrollment in selectedEnrollments
+                                            let newEnrollments = [...selectedEnrollments];
+                                            const existingIndex = newEnrollments.findIndex(
+                                              (obj) => obj.Id === enr.Id
+                                            );
+                                            if (existingIndex !== -1) {
+                                              newEnrollments = newEnrollments.filter(
+                                                (obj) => obj.Id !== enr.Id
+                                              );
+                                            } else {
+                                              newEnrollments.push({ Id: enr.Id });
+                                            }
+                                            setSelectedEnrollments(newEnrollments);
+
+                                            const courseName =
+                                              displayedCourseName ||
+                                              enr.CourseName ||
+                                              "Unknown course";
+
+                                            router.push(
+                                              `/reschedule?courseType=${encodeURIComponent(courseName)}&oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.BatchId}&enrollmentId=${enr.Id}&enrollmentIds=${JSON.stringify(newEnrollments)}&oldCourseLocation=${encodeURIComponent(displayedLocation)}&oldCourseStartDate=${encodeURIComponent(enr.Start_date_time__c || '')}`
+                                            );
+                                          }}
+                                          className="text-blue-500 underline"
+                                        >
+                                          Reschedule ({policyData?.reschedule})
+                                        </a>
+                                        <a
+                                          href="#"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            router.push(`/add-ons?enrollmentId=${enr.Id}`);
+                                          }}
+                                          className="text-blue-500 underline"
+                                        >
+                                          Add Course Material
+                                        </a>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-blue-300 underline">
+                                          Reschedule ({policyData?.reschedule})
+                                        </span>
+                                        <a
+                                          href="#"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            router.push(`/add-ons?enrollmentId=${enr.Id}`);
+                                          }}
+                                          className="text-blue-500 underline"
+                                        >
+                                          Add Course Material
+                                        </a>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-gray-500">No active courses found.</p>
+                      )}
                     </div>
-                  );
-                })}
-              </>
-            ) : (
-              <div className="text-gray-700">
-                <p>You don&apos;t have any upcoming courses. Click here to view your past courses!</p>
-                <button
-                  className="bg-blue-500 text-white px-4 py-2 mt-4 rounded"
-                  onClick={() => router.push("/past-courses")}
-                >
-                  View Past Courses
-                </button>
+                  </>
+                ) : (
+                  <h1 className="text-3xl font-semibold mb-6">Please select a student from above</h1>
+                )}
               </div>
-            )
-          ) : (
-            <p className="text-gray-700">
-              Please select a student to view past and upcoming courses.
-            </p>
-          )}
+            )}
+          </div>
+          <div
+            className={`transition-all duration-500 absolute w-full top-0 left-0
+              ${tab === "completed" ? "opacity-100 translate-x-0 z-10" : "opacity-0 translate-x-10 pointer-events-none z-0"}
+            `}
+          >
+            {tab === "completed" && (
+              <div>
+                {/* Completed/Past Courses Content */}
+                {selectedAccount ? (
+                  <>
+                    <h1 className="text-3xl font-semibold mb-6">{selectedAccount.Name}</h1>
+                    <div className="bg-white shadow p-6 rounded-lg">
+                      {pastCourses.length > 0 ? (
+                        pastCourses.map((enr) => {
+                          let displayedCourseName = "";
+                          let displayedDates = "";
+                          let displayedLocation = "";
+                          let displayedDaysUntilStart = enr.DaysUntilStart;
+
+                          // For combo or standard
+                          if (enr.isCombo) {
+                            // Example: Bronze Combo
+                            if (
+                              enr.CourseName &&
+                              enr.CourseName.includes("Bronze Combo")
+                            ) {
+                              displayedCourseName = "Bronze Combo";
+                              // Maybe find a Bronze Cross enrollment
+                              const bronzeCrossEnrollment = batches.find(
+                                (course) =>
+                                  !course.isCombo &&
+                                  course.CourseName?.includes("Bronze Cross")
+                              );
+                              if (bronzeCrossEnrollment) {
+                                const parsed = parseBronzeClassroom(
+                                  bronzeCrossEnrollment.Classroom || ""
+                                );
+                                displayedDates = parsed.date;
+                                displayedLocation = parsed.location;
+                                displayedDaysUntilStart =
+                                  bronzeCrossEnrollment.DaysUntilStart;
+                              } else {
+                                // fallback
+                                const parsed = parseBronzeClassroom(
+                                  enr.Classroom || ""
+                                );
+                                displayedDates = parsed.date;
+                                displayedLocation = parsed.location;
+                              }
+                            } else {
+                              // other combos
+                              const parsed = parseCourseName(
+                                enr.Registration_Name__c || ""
+                              );
+                              displayedCourseName =
+                                parsed.course || "Untitled Course";
+                              displayedDates = parsed.courseDates;
+                              displayedLocation = parsed.location;
+                            }
+                          } else {
+                            // standard enrollment
+                            const { courseDates, course, location } = parseCourseName(
+                              enr.CourseName
+                            );
+                            displayedCourseName = course || "Untitled Course";
+                            displayedDates = courseDates || enr.CourseDates;
+                            displayedLocation = location || enr.Location;
+                          }
+
+                          // policy details
+                          const policyData =
+                            policy && getPolicyForCourse(displayedDaysUntilStart, policy);
+
+                          return (
+                            <div
+                              key={enr.Id}
+                              className="card mb-4 p-4 border border-gray-300 rounded-md"
+                            >
+                              <div className="card-header">
+                                <span className="text-[#0070d9] font-bold text-lg">
+                                  {displayedCourseName}
+                                </span>
+                              </div>
+                              <div className="card-body mt-3">
+                                <div className="flex items-center justify-between flex-wrap gap-6 mt-2">
+                                  <div className="flex items-center gap-6">
+                                    <div className="flex items-center">
+                                      <span className="mr-2">📅</span>
+                                      {displayedDates}
+                                    </div>
+                                    <div className="flex items-center">
+                                      <span className="mr-2">📍</span>
+                                      {displayedLocation}
+                                    </div>
+                                    <div className="flex items-center">
+                                      <span className="mr-2">⏰</span>
+                                      {displayedDaysUntilStart < 0
+                                        ? "Course has passed"
+                                        : formatDays(displayedDaysUntilStart)}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-4 text-xs">
+                                    {displayedDaysUntilStart >
+                                    (policy?.daysBeforeReschedule ?? 0) ? (
+                                      <>
+                                        <a
+                                          href="#"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            // Toggle the enrollment in selectedEnrollments
+                                            let newEnrollments = [...selectedEnrollments];
+                                            const existingIndex = newEnrollments.findIndex(
+                                              (obj) => obj.Id === enr.Id
+                                            );
+                                            if (existingIndex !== -1) {
+                                              newEnrollments = newEnrollments.filter(
+                                                (obj) => obj.Id !== enr.Id
+                                              );
+                                            } else {
+                                              newEnrollments.push({ Id: enr.Id });
+                                            }
+                                            setSelectedEnrollments(newEnrollments);
+
+                                            const courseName =
+                                              displayedCourseName ||
+                                              enr.CourseName ||
+                                              "Unknown course";
+
+                                            router.push(
+                                              `/reschedule?courseType=${encodeURIComponent(courseName)}&oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enr.BatchId}&enrollmentId=${enr.Id}&enrollmentIds=${JSON.stringify(newEnrollments)}&oldCourseLocation=${encodeURIComponent(displayedLocation)}&oldCourseStartDate=${encodeURIComponent(enr.Start_date_time__c || '')}`
+                                            );
+                                          }}
+                                          className="text-blue-500 underline"
+                                        >
+                                          Reschedule ({policyData?.reschedule})
+                                        </a>
+                                        <a
+                                          href="#"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            router.push(`/add-ons?enrollmentId=${enr.Id}`);
+                                          }}
+                                          className="text-blue-500 underline"
+                                        >
+                                          Add Course Material
+                                        </a>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-blue-300 underline">
+                                          Reschedule ({policyData?.reschedule})
+                                        </span>
+                                        <a
+                                          href="#"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            router.push(`/add-ons?enrollmentId=${enr.Id}`);
+                                          }}
+                                          className="text-blue-500 underline"
+                                        >
+                                          Add Course Material
+                                        </a>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-gray-500">No completed courses found.</p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <h1 className="text-3xl font-semibold mb-6">Please select a student from above</h1>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -467,4 +664,4 @@ export default function DashboardPage() {
       )}
     </>
   );
-  }
+}
