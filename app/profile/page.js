@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import { AppContext } from "../context/appcontext";
 import Header from "../../components/Header";
@@ -8,69 +7,27 @@ import FooterMenu from "../../components/FooterMenu";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { selectedAccount, setSelectedAccount } = React.useContext(AppContext);
-  const [account, setAccount] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { selectedAccount, setSelectedAccount, allAccounts } = React.useContext(AppContext);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
-  const [accounts, setAccounts] = useState([]);
 
   useEffect(() => {
     console.log("Profile page mounted");
     console.log("Current selectedAccount:", selectedAccount);
+    console.log("Available accounts:", allAccounts);
     
-    const fetchData = async () => {
-      try {
-        console.log("Fetching data from /api/salesforce...");
-        const response = await axios.get("/api/salesforce");
-        console.log("API Response:", response.data);
-        
-        if (response.data.success) {
-          if (response.data.account) {
-            console.log("Single account found:", response.data.account);
-            setAccounts([response.data.account]);
-            setAccount(response.data.account);
-            if (!selectedAccount) {
-              console.log("Setting selected account (single account case)");
-              setSelectedAccount(response.data.account);
-            }
-          } else if (response.data.accounts) {
-            console.log("Multiple accounts found:", response.data.accounts);
-            setAccounts(response.data.accounts);
-            if (!selectedAccount && response.data.accounts.length > 0) {
-              console.log("Setting selected account (multiple accounts case)");
-              setSelectedAccount(response.data.accounts[0]);
-              setAccount(response.data.accounts[0]);
-            }
-          } else {
-            console.log("No account data found in response");
-          }
-        } else {
-          console.error("API returned error:", response.data.message);
-          setError(response.data.message || "Failed to load profile information");
-        }
-      } catch (err) {
-        console.error("Error fetching account info:", err);
-        console.error("Error details:", {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status
-        });
-        setError("Failed to load profile information");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedAccount, setSelectedAccount]);
+    if (!selectedAccount && allAccounts && allAccounts.length > 0) {
+      console.log("No selected account, setting first account from context");
+      setSelectedAccount(allAccounts[0]);
+    }
+  }, [selectedAccount, allAccounts, setSelectedAccount]);
 
   const handleSelect = (id) => {
     console.log("Account selected:", id);
-    const selected = accounts.find(acc => acc.Id === id);
+    const selected = allAccounts.find(acc => acc.Id === id);
     console.log("Selected account details:", selected);
     setSelectedAccount(selected);
-    setAccount(selected);
   };
 
   const handleLogout = () => {
@@ -96,50 +53,21 @@ export default function ProfilePage() {
     return `${street || ''}\n${city || ''}, ${state || ''} ${postalCode || ''}\n${country || ''}`;
   };
 
-  if (loading) {
+  if (!selectedAccount) {
     return (
       <div className="min-h-screen bg-gray-100">
         <Header 
           selectedAccount={null}
           headerTagline="Profile"
-          accounts={[]}
-          showAccountDropdown={false}
-          setShowAccountDropdown={() => {}}
-          handleSelect={() => {}}
-          handleLogout={() => {}}
+          accounts={allAccounts || []}
+          showAccountDropdown={showAccountDropdown}
+          setShowAccountDropdown={setShowAccountDropdown}
+          handleSelect={handleSelect}
+          handleLogout={handleLogout}
         />
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
-              <div className="space-y-3">
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                <div className="h-4 bg-gray-200 rounded w-4/6"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <FooterMenu />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100">
-        <Header 
-          selectedAccount={null}
-          headerTagline="Profile"
-          accounts={[]}
-          showAccountDropdown={false}
-          setShowAccountDropdown={() => {}}
-          handleSelect={() => {}}
-          handleLogout={() => {}}
-        />
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-            <div className="text-red-500 text-center">{error}</div>
+            <div className="text-center text-gray-500">Please select an account to view profile information</div>
           </div>
         </div>
         <FooterMenu />
@@ -150,9 +78,9 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Header 
-        selectedAccount={account}
+        selectedAccount={selectedAccount}
         headerTagline="Profile"
-        accounts={accounts}
+        accounts={allAccounts || []}
         showAccountDropdown={showAccountDropdown}
         setShowAccountDropdown={setShowAccountDropdown}
         handleSelect={handleSelect}
@@ -183,39 +111,39 @@ export default function ProfilePage() {
           <div className="space-y-4">
             <div className="border-b pb-4">
               <h2 className="text-sm font-medium text-gray-500 mb-1">Account Name</h2>
-              <p className="text-lg text-gray-800">{account?.Name || "Not available"}</p>
+              <p className="text-lg text-gray-800">{selectedAccount?.Name || "Not available"}</p>
             </div>
 
             <div className="border-b pb-4">
               <h2 className="text-sm font-medium text-gray-500 mb-1">Phone</h2>
-              <p className="text-lg text-gray-800">{account?.Phone || "Not available"}</p>
+              <p className="text-lg text-gray-800">{selectedAccount?.Phone || "Not available"}</p>
             </div>
 
             <div className="border-b pb-4">
               <h2 className="text-sm font-medium text-gray-500 mb-1">Email</h2>
-              <p className="text-lg text-gray-800">{account?.PersonEmail || "Not available"}</p>
+              <p className="text-lg text-gray-800">{selectedAccount?.PersonEmail || "Not available"}</p>
             </div>
 
             <div className="border-b pb-4">
               <h2 className="text-sm font-medium text-gray-500 mb-1">Birthdate</h2>
-              <p className="text-lg text-gray-800">{formatDate(account?.PersonBirthdate)}</p>
+              <p className="text-lg text-gray-800">{formatDate(selectedAccount?.PersonBirthdate)}</p>
             </div>
 
             <div className="border-b pb-4">
               <h2 className="text-sm font-medium text-gray-500 mb-1">Emergency Contact</h2>
-              <p className="text-lg text-gray-800">{account?.Emergency_Contact_Name__c || "Not available"}</p>
-              <p className="text-sm text-gray-600">{account?.Emergency_Contact_Number__c || "Not available"}</p>
+              <p className="text-lg text-gray-800">{selectedAccount?.Emergency_Contact_Name__c || "Not available"}</p>
+              <p className="text-sm text-gray-600">{selectedAccount?.Emergency_Contact_Number__c || "Not available"}</p>
             </div>
 
             <div className="border-b pb-4">
               <h2 className="text-sm font-medium text-gray-500 mb-1">LSS ID</h2>
-              <p className="text-lg text-gray-800">{account?.LSS_Member_ID__c || "Not available"}</p>
+              <p className="text-lg text-gray-800">{selectedAccount?.LSS_Member_ID__c || "Not available"}</p>
             </div>
 
             <div>
               <h2 className="text-sm font-medium text-gray-500 mb-1">Mailing Address</h2>
               <p className="text-lg text-gray-800 whitespace-pre-line">
-                {formatAddress(account?.PersonMailingAddress)}
+                {formatAddress(selectedAccount?.PersonMailingAddress)}
               </p>
             </div>
           </div>
