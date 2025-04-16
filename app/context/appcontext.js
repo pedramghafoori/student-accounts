@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useState, useEffect } from "react";
 import axios from "axios";
+import Cookies from 'js-cookie';
 // We'll store the full array of accounts in allAccounts
 
 export const AppContext = createContext(null);
@@ -12,6 +13,13 @@ export default function AppProvider({ children }) {
   const [allAccounts, setAllAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Create axios instance with default config
+  const api = axios.create({
+    headers: {
+      'Authorization': `Bearer ${Cookies.get('userToken')}`
+    }
+  });
 
   useEffect(() => {
     console.log("[AppContext] selectedAccount changed:", selectedAccount);
@@ -31,14 +39,19 @@ export default function AppProvider({ children }) {
 
   // 1) On mount, fetch the full array of accounts
   useEffect(() => {
-    axios.get("/api/salesforce")
+    api.get("/api/salesforce")
       .then((res) => {
         if (res.data.success) {
           if (res.data.accounts) setAllAccounts(res.data.accounts);
           else if (res.data.account) setAllAccounts([res.data.account]);
         } else setError(res.data.message || "Error fetching accounts");
       })
-      .catch((err) => setError(err.message));
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          setSessionExpired(true);
+        }
+        setError(err.message);
+      });
   }, []);
 
   // Whenever selectedAccount changes, fetch registrations
@@ -49,7 +62,7 @@ export default function AppProvider({ children }) {
     }
 
     setLoading(true);
-    axios
+    api
       .get(`/api/transactions/registrations?accountId=${selectedAccount.Id}`)
       .then((res) => {
         if (res.data.success) {
@@ -59,6 +72,9 @@ export default function AppProvider({ children }) {
         }
       })
       .catch((err) => {
+        if (err.response?.status === 401) {
+          setSessionExpired(true);
+        }
         setError(err.message);
       })
       .finally(() => {

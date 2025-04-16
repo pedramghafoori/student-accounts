@@ -3,36 +3,27 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppContext } from "../context/appcontext";
 import Header from "../../components/Header";
-import FooterMenu from "../../components/FooterMenu";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { selectedAccount, setSelectedAccount, allAccounts } = React.useContext(AppContext);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   useEffect(() => {
-    console.log("Profile page mounted");
-    console.log("Current selectedAccount:", selectedAccount);
-    console.log("Available accounts:", allAccounts);
-    
     if (!selectedAccount && allAccounts && allAccounts.length > 0) {
-      console.log("No selected account, setting first account from context");
       setSelectedAccount(allAccounts[0]);
     }
+    setLoading(false);
   }, [selectedAccount, allAccounts, setSelectedAccount]);
 
   const handleSelect = (id) => {
-    console.log("Account selected:", id);
     const selected = allAccounts.find(acc => acc.Id === id);
-    console.log("Selected account details:", selected);
     setSelectedAccount(selected);
   };
 
   const handleLogout = () => {
-    console.log("Logging out...");
-    document.cookie = "userToken=; path=/; max-age=0;";
     setSelectedAccount(null);
     router.push("/login");
   };
@@ -53,9 +44,30 @@ export default function ProfilePage() {
     return `${street || ''}\n${city || ''}, ${state || ''} ${postalCode || ''}\n${country || ''}`;
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header 
+          selectedAccount={null}
+          headerTagline="Profile"
+          accounts={allAccounts || []}
+          showAccountDropdown={showAccountDropdown}
+          setShowAccountDropdown={setShowAccountDropdown}
+          handleSelect={handleSelect}
+          handleLogout={handleLogout}
+        />
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+            <div className="text-center text-gray-500">Loading profile information...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!selectedAccount) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-white">
         <Header 
           selectedAccount={null}
           headerTagline="Profile"
@@ -70,13 +82,12 @@ export default function ProfilePage() {
             <div className="text-center text-gray-500">Please select an account to view profile information</div>
           </div>
         </div>
-        <FooterMenu />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-white">
       <Header 
         selectedAccount={selectedAccount}
         headerTagline="Profile"
@@ -149,7 +160,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-      <FooterMenu />
     </div>
   );
 } 
