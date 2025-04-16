@@ -92,7 +92,7 @@ function ReceiptDisplay({ transaction }) {
   );
 }
 
-export default function TransactionsPage() {
+export default function ReceiptsPage() {
   const {
     selectedAccount,
     setSelectedAccount,
@@ -131,7 +131,7 @@ export default function TransactionsPage() {
     return (
       <>
         <Header
-          headerTagline="Transactions for"
+          headerTagline="Receipts for"
           selectedAccount={selectedAccount}
           accounts={allAccounts || []}
           showAccountDropdown={showAccountDropdown}
@@ -142,7 +142,7 @@ export default function TransactionsPage() {
 
         <div className="p-6">
           <div className="bg-white shadow p-6 rounded-lg">
-            <h1 className="text-3xl font-semibold mb-4">Transactions for</h1>
+            <h1 className="text-3xl font-semibold mb-4">Receipts for</h1>
             <p className="text-gray-600">Please select an account.</p>
           </div>
         </div>
@@ -151,20 +151,19 @@ export default function TransactionsPage() {
   }
 
   return (
-    <>
-      <Header
-        headerTagline="Transactions for"
+    <div className="min-h-screen bg-white">
+      <Header 
         selectedAccount={selectedAccount}
+        headerTagline="Receipts for"
         accounts={allAccounts || []}
         showAccountDropdown={showAccountDropdown}
         setShowAccountDropdown={setShowAccountDropdown}
         handleSelect={handleSelect}
         handleLogout={handleLogout}
       />
-
-      <div className="p-6">
-        <div className="bg-white shadow p-6 rounded-lg">
-          <h1 className="text-3xl font-semibold mb-4">Transactions</h1>
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-semibold mb-4">Receipts for {selectedAccount?.Name}</h1>
 
           {error && <p className="text-red-600 mb-4">{error}</p>}
 
@@ -287,7 +286,7 @@ export default function TransactionsPage() {
             <p className="text-gray-700">No registrations found.</p>
           )}
         </div>
-      </div>
+      </main>
 
       {sessionExpired && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -298,6 +297,6 @@ export default function TransactionsPage() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

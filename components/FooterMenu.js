@@ -35,7 +35,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
           <span className={`footer-menu-label ${isActive("/dashboard") ? "text-blue-500" : "text-white"}`}>Courses</span>
         </Link>
 
-        {/* Transactions */}
+        {/* Receipts */}
         <Link
           href="/transactions"
           className="footer-menu-item flex flex-col items-center text-xs"
@@ -55,7 +55,7 @@ export default function FooterMenu({ allUserAccounts = [] }) {
               </g>
             </svg>
           )}
-          <span className={`footer-menu-label ${isActive("/transactions") ? "text-blue-500" : "text-white"}`}>Transactions</span>
+          <span className={`footer-menu-label ${isActive("/transactions") ? "text-blue-500" : "text-white"}`}>Receipts</span>
         </Link>
 
         {/* Profile */}
