@@ -75,7 +75,10 @@ export async function GET(request) {
 
     // 5) Query Salesforce for the Account record using PersonEmail on the Account object (Person Account)
     const accountQuery = `
-          SELECT Id, Name, PersonEmail
+          SELECT Id, Name, PersonEmail, Phone, PersonBirthdate,
+                 Emergency_Contact_Name__c, Emergency_Contact_Number__c,
+                 LSS_Member_ID__c, PersonMailingStreet, PersonMailingCity,
+                 PersonMailingState, PersonMailingPostalCode, PersonMailingCountry
           FROM Account
           WHERE PersonEmail = '${userEmail}'
         `;
@@ -91,17 +94,16 @@ export async function GET(request) {
       return NextResponse.json({ success: true, accounts: accountResult.records });
     } else {
       const account = accountResult.records[0];
-      console.log("Retrieved Salesforce account:", account);
-      // Query Salesforce for Opportunities related to the account
-      const oppQuery = `
-            SELECT Id, Name, StageName, CloseDate, Amount, AccountId
-            FROM Opportunity
-            WHERE AccountId = '${account.Id}'
-          `;
-      console.log("Executing Salesforce opportunities query:", oppQuery);
-      const oppResult = await conn.query(oppQuery);
-      console.log(`Salesforce opportunities query returned ${oppResult.totalSize} record(s):`, oppResult.records);
-      return NextResponse.json({ success: true, account, opportunities: oppResult.records });
+      // Format the mailing address
+      account.PersonMailingAddress = {
+        street: account.PersonMailingStreet,
+        city: account.PersonMailingCity,
+        state: account.PersonMailingState,
+        postalCode: account.PersonMailingPostalCode,
+        country: account.PersonMailingCountry
+      };
+      console.log("Retrieved Salesforce account with formatted address:", account);
+      return NextResponse.json({ success: true, account });
     }
   } catch (error) {
     console.error("Salesforce Error in GET /api/salesforce route:", error);

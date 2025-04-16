@@ -16,28 +16,46 @@ export default function ProfilePage() {
   const [accounts, setAccounts] = useState([]);
 
   useEffect(() => {
+    console.log("Profile page mounted");
+    console.log("Current selectedAccount:", selectedAccount);
+    
     const fetchData = async () => {
       try {
+        console.log("Fetching data from /api/salesforce...");
         const response = await axios.get("/api/salesforce");
+        console.log("API Response:", response.data);
+        
         if (response.data.success) {
           if (response.data.account) {
+            console.log("Single account found:", response.data.account);
             setAccounts([response.data.account]);
             setAccount(response.data.account);
             if (!selectedAccount) {
+              console.log("Setting selected account (single account case)");
               setSelectedAccount(response.data.account);
             }
           } else if (response.data.accounts) {
+            console.log("Multiple accounts found:", response.data.accounts);
             setAccounts(response.data.accounts);
             if (!selectedAccount && response.data.accounts.length > 0) {
+              console.log("Setting selected account (multiple accounts case)");
               setSelectedAccount(response.data.accounts[0]);
               setAccount(response.data.accounts[0]);
             }
+          } else {
+            console.log("No account data found in response");
           }
         } else {
+          console.error("API returned error:", response.data.message);
           setError(response.data.message || "Failed to load profile information");
         }
       } catch (err) {
         console.error("Error fetching account info:", err);
+        console.error("Error details:", {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status
+        });
         setError("Failed to load profile information");
       } finally {
         setLoading(false);
@@ -48,12 +66,15 @@ export default function ProfilePage() {
   }, [selectedAccount, setSelectedAccount]);
 
   const handleSelect = (id) => {
+    console.log("Account selected:", id);
     const selected = accounts.find(acc => acc.Id === id);
+    console.log("Selected account details:", selected);
     setSelectedAccount(selected);
     setAccount(selected);
   };
 
   const handleLogout = () => {
+    console.log("Logging out...");
     document.cookie = "userToken=; path=/; max-age=0;";
     setSelectedAccount(null);
     router.push("/login");
