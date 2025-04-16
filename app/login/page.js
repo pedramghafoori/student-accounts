@@ -158,7 +158,7 @@ function LoginContent() {
 
           {step === "EMAIL" && (
             <p className="text-center text-sm text-gray-600 mb-8">
-              Please enter the email you used during registration, and we'll send you a link or OTP.
+              Please enter the email you used during registration, and we&apos;ll send you a link or OTP.
             </p>
           )}
 
