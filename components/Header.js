@@ -18,10 +18,10 @@ export default function Header({
 
   return (
     <>
-      <header className="header-wave-parent relative bg-blue-500 text-white overflow-hidden">
+      <header className="header-wave-parent relative bg-blue-500 text-white">
         <div
-          className="my-header absolute inset-0 p-6 flex items-center justify-between"
-          style={{ zIndex: 10 }}
+          className="absolute inset-0 p-6 flex items-center justify-between"
+          style={{ zIndex: 2 }}
         >
           <div>
             <h1 className="header-account-tagline">{headerTagline}</h1>
@@ -60,7 +60,7 @@ export default function Header({
               <button
                 onClick={() => setShowAccountDropdown(!showAccountDropdown)}
                 className="flex items-center px-3 py-2 rounded"
-                style={{ zIndex: 10 }}
+                style={{ zIndex: 2 }}
               >
                 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20.2832 19.9316" width="36" height="36">
                   <g>
@@ -73,16 +73,13 @@ export default function Header({
           ) : null}
         </div>
 
-        <svg
-          className="relative block h-[90px] w-full"
-          preserveAspectRatio="none"
-          viewBox="0 0 1200 120"
-        >
-          <path
-            d="M985.66 40.99c-49.94 2.19-99.88 9.21-149.82 16.12C711 65.55 661 78.1 610.96 83.66 530 92 449 86.32 368 83.29c-49.39-1.72-98.88-1.6-148.23 1.33-52.23 3.14-104.37 8.78-156.58 14.14-2.88.29-52.07 5.75-52.19 7.85 0 .56 1200 0 1200 0v-24.7c-52-3.89-104-7.78-156-11.57z"
-            fill="white"
-          />
-        </svg>
+        <div className="absolute inset-x-0 bottom-0" style={{ zIndex: 1 }}>
+          <svg className="wave-svg" viewBox="0 0 1440 320" preserveAspectRatio="none">
+            <path fill="#ffffff" fillOpacity="0.2" d="M-360,160 C0,60 360,260 720,160 C1080,60 1440,260 1800,160 L1800,320 L-360,320 Z" />
+            <path fill="#ffffff" fillOpacity="0.4" d="M-360,192 C0,92 360,292 720,192 C1080,92 1440,292 1800,192 L1800,320 L-360,320 Z" />
+            <path fill="#ffffff" d="M-360,224 C0,124 360,324 720,224 C1080,124 1440,324 1800,224 L1800,320 L-360,320 Z" />
+          </svg>
+        </div>
       </header>
 
       {showAccountDropdown && (
