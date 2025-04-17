@@ -120,7 +120,7 @@ export default function ProfilePage() {
         handleSelect={handleSelect}
         handleLogout={handleLogout}
       />
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 pb-16">
         <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
           <div className="flex flex-col items-center mb-6">
             <svg
@@ -139,15 +139,10 @@ export default function ProfilePage() {
                 />
               </g>
             </svg>
-            <h1 className="text-2xl font-bold text-gray-800">Profile</h1>
+            <h1 className="text-2xl font-bold text-gray-800">{selectedAccount?.Name || "Profile"}</h1>
           </div>
 
           <div className="space-y-4">
-            <div className="border-b pb-4">
-              <h2 className="text-sm font-medium text-gray-500 mb-1">Account Name</h2>
-              <p className="text-lg text-gray-800">{selectedAccount?.Name || "Not available"}</p>
-            </div>
-
             <div className="border-b pb-4">
               <h2 className="text-sm font-medium text-gray-500 mb-1">Phone</h2>
               <p className="text-lg text-gray-800">{selectedAccount?.Phone || "Not available"}</p>
