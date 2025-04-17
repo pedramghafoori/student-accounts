@@ -21,7 +21,7 @@
   width: 70%; /* Changed from calc(100% - 2rem) to 50% */
   margin: 0 auto;
   z-index: 9999; /* keep above other elements if necessary */
-  background-color: #ebebeb; /* dark background */
+  background-color: #ffffff; /* dark background */
   border-radius: 4rem; /* Changed from 1rem to 2rem for more rounded corners */
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   display: flex;
@@ -45,14 +45,32 @@
 /* Each navigation link (Home, Accounts, etc.) */
 .footer-menu-item {
   display: flex;
-  flex-direction: column; /* icon above label */
+  flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   text-decoration: none;
-  color: #64748b; /* changed to grey for inactive state */
-  padding: 0.5rem;
+  color: #64748b;
+  padding: 0.75rem 0.5rem;
   margin: 0 0.5rem;
   border-radius: 0.25rem;
   transition: all 0.2s ease;
+  height: 72px; /* Fixed height instead of min-height */
+}
+
+/* Icon container to ensure consistent spacing */
+.footer-menu-item > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+/* Icon sizing and margin */
+.footer-menu-item img {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 8px; /* Increased spacing between icon and label */
+  flex-shrink: 0; /* Prevent icon from shrinking */
 }
 
 /* Active state */
@@ -65,17 +83,14 @@
   background-color: rgba(37, 94, 141, 0.1); /* slightly blue tint on hover */
 }
 
-/* Icon sizing and margin */
-.footer-menu-icon {
-  width: 24px;
-  height: 24px;
-  margin-bottom: 2px;
-}
-
 /* The label text beneath the icon */
 .footer-menu-label {
-  font-size: 0.75rem; /* 12px, or adjust to preference */
-  color: inherit; /* This will ensure it takes the parent's color */
+  font-size: 0.75rem;
+  color: inherit;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap; /* Prevent text wrapping */
+  flex-shrink: 0; /* Prevent label from shrinking */
 }
 .header-wave-parent {
   position: relative;

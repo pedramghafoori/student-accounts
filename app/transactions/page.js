@@ -10,27 +10,41 @@ function ReceiptDisplay({ transaction }) {
   const [receiptUrl, setReceiptUrl] = useState("");
   const [cardType, setCardType] = useState("");
   const [last4, setLast4] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!transaction.Transaction_Reference__c) return;
 
-    axios
-      .get(`/api/transactions/stripe?reference=${transaction.Transaction_Reference__c}`)
-      .then((res) => {
+    const fetchReceipt = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const res = await axios.get(`/api/transactions/stripe?reference=${transaction.Transaction_Reference__c}`);
         if (res.data.success) {
-          if (res.data.receiptUrl) {
-            setReceiptUrl(res.data.receiptUrl);
-          }
-          if (res.data.cardType) {
-            setCardType(res.data.cardType);
-          }
-          if (res.data.last4) {
-            setLast4(res.data.last4);
-          }
+          if (res.data.receiptUrl) setReceiptUrl(res.data.receiptUrl);
+          if (res.data.cardType) setCardType(res.data.cardType);
+          if (res.data.last4) setLast4(res.data.last4);
         }
-      })
-      .catch((err) => console.error("Error retrieving stripe receipt:", err));
-  }, [transaction.Transaction_Reference__c]);
+      } catch (err) {
+        console.error("Error retrieving stripe receipt:", err);
+        setError("Unable to load receipt details");
+        
+        // Retry up to 3 times with increasing delays
+        if (retryCount < 3) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, Math.pow(2, retryCount) * 1000); // Exponential backoff
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReceipt();
+  }, [transaction.Transaction_Reference__c, retryCount]);
 
   const getCardLogo = (type) => {
     switch (type.toLowerCase()) {
@@ -65,28 +79,50 @@ function ReceiptDisplay({ transaction }) {
 
   return (
     <div className="mt-4">
-      <div className="flex items-center gap-2">
-        {cardType && (
-          <>
-            <p className="text-sm text-gray-600">
-              <strong>Payment Method:</strong>
-            </p>
-            {getCardLogo(cardType)}
-            {last4 && (
-              <span className="text-sm text-gray-600">{last4}</span>
+      {loading && (
+        <div className="text-sm text-gray-500">Loading receipt details...</div>
+      )}
+      
+      {error && (
+        <div className="text-sm text-red-500 flex items-center gap-2">
+          <span>{error}</span>
+          {retryCount < 3 && (
+            <button
+              onClick={() => setRetryCount(prev => prev + 1)}
+              className="text-blue-500 hover:text-blue-700 text-xs"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          <div className="flex items-center gap-2">
+            {cardType && (
+              <>
+                <p className="text-sm text-gray-600">
+                  <strong>Payment Method:</strong>
+                </p>
+                {getCardLogo(cardType)}
+                {last4 && (
+                  <span className="text-sm text-gray-600">{last4}</span>
+                )}
+              </>
             )}
-          </>
-        )}
-      </div>
-      {receiptUrl && (
-        <a
-          href={receiptUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="text-blue-500 underline text-sm mt-1 block"
-        >
-          Download Receipt
-        </a>
+          </div>
+          {receiptUrl && (
+            <a
+              href={receiptUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-500 underline text-sm mt-1 block"
+            >
+              Download Receipt
+            </a>
+          )}
+        </>
       )}
     </div>
   );
