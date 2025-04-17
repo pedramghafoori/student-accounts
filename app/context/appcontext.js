@@ -11,7 +11,7 @@ export default function AppProvider({ children }) {
   const [registrations, setRegistrations] = useState([]);
   const [error, setError] = useState("");
   const [allAccounts, setAllAccounts] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
 
   // Create axios instance with default config
@@ -39,19 +39,36 @@ export default function AppProvider({ children }) {
 
   // 1) On mount, fetch the full array of accounts
   useEffect(() => {
-    api.get("/api/salesforce")
-      .then((res) => {
+    const fetchAccounts = async () => {
+      try {
+        const res = await api.get("/api/salesforce");
         if (res.data.success) {
-          if (res.data.accounts) setAllAccounts(res.data.accounts);
-          else if (res.data.account) setAllAccounts([res.data.account]);
-        } else setError(res.data.message || "Error fetching accounts");
-      })
-      .catch((err) => {
+          if (res.data.accounts) {
+            setAllAccounts(res.data.accounts);
+            // If no account is selected, select the first one
+            if (!selectedAccount && res.data.accounts.length > 0) {
+              setSelectedAccount(res.data.accounts[0]);
+            }
+          } else if (res.data.account) {
+            setAllAccounts([res.data.account]);
+            if (!selectedAccount) {
+              setSelectedAccount(res.data.account);
+            }
+          }
+        } else {
+          setError(res.data.message || "Error fetching accounts");
+        }
+      } catch (err) {
         if (err.response?.status === 401) {
           setSessionExpired(true);
         }
         setError(err.message);
-      });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAccounts();
   }, []);
 
   // Whenever selectedAccount changes, fetch registrations
@@ -84,8 +101,26 @@ export default function AppProvider({ children }) {
 
   function updateGlobalSelectedAccount(acc) {
     console.log("[AppContext] updateGlobalSelectedAccount called with acc=", acc);
-    setSelectedAccount(acc);
+    if (acc) {
+      setSelectedAccount(acc);
+      // Store the selected account ID in localStorage for persistence
+      localStorage.setItem('selectedAccountId', acc.Id);
+    } else {
+      setSelectedAccount(null);
+      localStorage.removeItem('selectedAccountId');
+    }
   }
+
+  // Restore selected account from localStorage on mount
+  useEffect(() => {
+    const storedAccountId = localStorage.getItem('selectedAccountId');
+    if (storedAccountId && allAccounts.length > 0) {
+      const account = allAccounts.find(acc => acc.Id === storedAccountId);
+      if (account) {
+        setSelectedAccount(account);
+      }
+    }
+  }, [allAccounts]);
 
   // Provide allAccounts in context
   const contextValue = {

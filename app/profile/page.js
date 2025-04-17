@@ -6,52 +6,31 @@ import Header from "../../components/Header";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { selectedAccount, setSelectedAccount, allAccounts } = React.useContext(AppContext);
+  const { selectedAccount, setSelectedAccount, allAccounts, loading: contextLoading } = React.useContext(AppContext);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   useEffect(() => {
-    console.log('Selected Account:', selectedAccount);
-    console.log('All Accounts:', allAccounts);
-    
-    if (selectedAccount) {
-      console.log('Date of Birth:', {
-        raw: selectedAccount.PersonBirthdate,
-        formatted: formatDate(selectedAccount.PersonBirthdate)
-      });
-      
-      // Log emergency contact details
-      console.log('Emergency Contact:', {
-        name: selectedAccount.Emergency_Contact_Name__pc,
-        number: selectedAccount.Emergency_Contact_Number__c,
-        raw: selectedAccount
-      });
-      
-      // Log mailing address details
-      console.log('Mailing Address:', {
-        raw: selectedAccount.PersonMailingAddress,
-        street: selectedAccount.PersonMailingStreet,
-        city: selectedAccount.PersonMailingCity,
-        state: selectedAccount.PersonMailingState,
-        postalCode: selectedAccount.PersonMailingPostalCode,
-        country: selectedAccount.PersonMailingCountry
-      });
+    // Wait for context to be ready
+    if (!contextLoading) {
+      if (!selectedAccount && allAccounts?.length > 0) {
+        setSelectedAccount(allAccounts[0]);
+      }
+      setLoading(false);
     }
-    
-    if (!selectedAccount && allAccounts && allAccounts.length > 0) {
-      setSelectedAccount(allAccounts[0]);
-    }
-    setLoading(false);
-  }, [selectedAccount, allAccounts, setSelectedAccount]);
+  }, [selectedAccount, allAccounts, contextLoading, setSelectedAccount]);
 
   const handleSelect = (id) => {
     const selected = allAccounts.find(acc => acc.Id === id);
-    console.log('Selected Account Details:', selected);
-    setSelectedAccount(selected);
+    if (selected) {
+      setSelectedAccount(selected);
+    }
   };
 
   const handleLogout = () => {
+    document.cookie = "userToken=; path=/; max-age=0;";
+    localStorage.removeItem('selectedAccountId');
     setSelectedAccount(null);
     router.push("/login");
   };
