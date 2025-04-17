@@ -19,13 +19,13 @@ main {
 /* Pin the footer to the bottom of the screen */
 .footer-nav {
   position: fixed;
-  bottom: 0.45rem;
+  bottom: 1.45rem;
   left: 50%;
   transform: translateX(-50%);
-  width: 80%; /* Increased from 70% to give more room for spacing */
+  width: 60%; /* Increased from 70% to give more room for spacing */
   margin: 0 auto;
   z-index: 50;
-  background-color: #ffffff;
+  background-color: #f6f6f6;
   border-radius: 2rem;
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   display: flex;
@@ -58,8 +58,8 @@ main {
   margin: 0;
   border-radius: 0.25rem;
   transition: all 0.2s ease;
-  height: 35px;
-  min-width: 100px; /* Increased from 80px for more spacing */
+  height: 38px;
+  min-width: 00px; /* Increased from 80px for more spacing */
 }
 
 /* Icon container to ensure consistent spacing */
@@ -68,13 +68,13 @@ main {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px; /* Reduced from 6px for tighter vertical spacing */
+  gap: 6px; /* Reduced from 6px for tighter vertical spacing */
 }
 
 /* Icon sizing and margin */
 .footer-menu-item img {
   width: 24px;
-  height: 24px;
+  height: 30px;
   flex-shrink: 0;
 }
 
@@ -185,13 +185,13 @@ main {
 }
 
 .wave-svg path:nth-child(1) {
-  animation: waveMoveRight 12s ease-in-out infinite alternate;
+  animation: waveMoveRight 4s ease-in-out infinite alternate;
 }
 
 .wave-svg path:nth-child(2) {
-  animation: waveMoveLeft 14s ease-in-out infinite alternate;
+  animation: waveMoveLeft 10s ease-in-out infinite alternate;
 }
 
 .wave-svg path:nth-child(3) {
-  animation: waveMoveRight 16s ease-in-out infinite alternate;
+  animation: waveMoveRight 12s ease-in-out infinite alternate;
 }
