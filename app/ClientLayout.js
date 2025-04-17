@@ -35,7 +35,7 @@ export default function ClientLayout({ children }) {
           handleLogout={handleLogout}
         />
       )}
-      <main className="flex-1 pb-16">
+      <main className="flex-1 w-full relative">
         {children}
       </main>
       {!isLoginPage && <FooterMenu />}
