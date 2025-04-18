@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import React, { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import axios from "axios";
+import Header from "../../components/Header";
 
 function parseDateFromCourseName(fullName = "") {
   const match = fullName.match(/^([A-Za-z]+\s+\d{1,2}\s*-\s*(?:[A-Za-z]+\s+)?\d{1,2})/);
@@ -144,196 +145,201 @@ export function RescheduleImpl() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      {step === 1 && (
-        <>
-          {/* Current Course Card */}
-          <div className="mb-6 p-4 border-2 border-blue-600 bg-blue-50 rounded-lg shadow-xl">
-            <h2 className="text-xl font-bold text-blue-800">Current Course</h2>
-            <p className="mt-2 text-lg">
-              {oldCourseName || "No current course available"}
-            </p>
-            <div className="flex items-center gap-6 mt-2 text-gray-600">
-              <div className="flex items-center">
-                <span className="mr-2">📍</span>
-                {oldCourseLocation || "Location N/A"}
+    <>
+      <Header
+        headerTagline="Reschedule Course"
+        selectedAccount={null}
+        accounts={[]}
+        showAccountDropdown={false}
+        setShowAccountDropdown={() => {}}
+        handleSelect={() => {}}
+        handleLogout={() => router.push("/login")}
+        courseName={oldCourseName}
+        showBackButton={true}
+      />
+      
+      <div className="max-w-3xl mx-auto py-8 px-4 pb-28">
+        {step === 1 && (
+          <>
+            {/* Current Course Card */}
+            <div className="mb-6 p-4 border-2 border-blue-600 bg-blue-50 rounded-lg shadow-xl">
+              <h2 className="text-xl font-bold text-blue-800">Current Course</h2>
+              <p className="mt-2 text-lg">
+                {oldCourseName || "No current course available"}
+              </p>
+              <div className="flex items-center gap-6 mt-2 text-gray-600">
+                <div className="flex items-center">
+                  <span className="mr-2">📍</span>
+                  {oldCourseLocation || "Location N/A"}
+                </div>
+                <div className="flex items-center">
+                  <span className="mr-2">⏰</span>
+                  {oldCourseStartDate ? (
+                    getDaysUntil(oldCourseStartDate) < 0 ? (
+                      <span className="text-red-500">Course has passed</span>
+                    ) : (
+                      <span>Days Until: {getDaysUntil(oldCourseStartDate)}</span>
+                    )
+                  ) : (
+                    "Start date N/A"
+                  )}
+                </div>
               </div>
-              <div className="flex items-center">
-                <span className="mr-2">⏰</span>
-                {oldCourseStartDate ? (
-                  getDaysUntil(oldCourseStartDate) < 0 ? (
+            </div>
+
+            {/* Future Courses Section */}
+            <h1 className="text-2xl mb-4">
+              Reschedule Your Course: {oldCourseName || "Unknown"}
+            </h1>
+
+            {/* Location Filter */}
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">Filter by Location:</p>
+              <div className="flex flex-wrap gap-2">
+                {uniqueLocations.map((loc) => (
+                  <button
+                    key={loc.id}
+                    onClick={() => toggleLocation(loc.id)}
+                    className={`px-3 py-1 border rounded text-sm ${
+                      selectedLocations.includes(loc.id)
+                        ? "border-blue-500 text-blue-500"
+                        : "border-gray-300 text-gray-600"
+                    }`}
+                  >
+                    {loc.name}
+                  </button>
+                ))}
+              </div>
+              <hr className="mt-4 border-gray-300" />
+            </div>
+
+            <p className="text-gray-700 mb-4">
+              Please select one of the future courses to reschedule into:
+            </p>
+            {loading && <p className="text-gray-500">Loading future courses...</p>}
+            {error && <p className="text-red-600 mb-4">{error}</p>}
+
+            <div className="space-y-4 max-h-72 overflow-y-auto border border-gray-200 p-4 rounded">
+              {filteredCourses.map((course) => {
+                const hasPassed = course.DaysUntilStart < 0;
+                return (
+                  <div
+                    key={course.Id}
+                    onClick={() => handleSelectCourse(course)}
+                    className={`card mb-2 p-4 border rounded-md cursor-pointer ${
+                      selectedNewCourse?.Id === course.Id
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    <div className="card-header">
+                      <span className="text-[#0070d9] text-lg">
+                        {parseDateFromCourseName(course.Name || "Untitled Course")}
+                      </span>
+                    </div>
+                    <div className="card-body mt-0">
+                      <div className="flex items-center justify-between gap-6 mt-2 text-gray-600 h-auto">
+                        <div className="flex items-center gap-6">
+                          <div className="flex items-center">
+                            <span className="mr-2">📍</span>
+                            {course.Location__r?.Name || course.Location__c}
+                          </div>
+                          <div className="flex items-center">
+                            <span className="mr-2">⏰</span>
+                            {hasPassed ? (
+                              <span className="text-red-500">Course has passed</span>
+                            ) : (
+                              <span>
+                                Days Until: {getDaysUntil(course.Start_date_time__c)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col text-sm self-start">
+                          <button
+                            onClick={() => handleRescheduleClick(course)}
+                            className="px-3 py-1 border border-blue-500 text-blue-500 rounded hover:bg-blue-50"
+                          >
+                            Reschedule into this course
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <h1 className="text-2xl font-bold mb-4">Confirm Reschedule</h1>
+            <div className="mb-4">
+              <p className="mb-2">
+                <strong>Old Course:</strong> {oldCourseName} (ID: {oldCourseId})
+              </p>
+              <p className="mb-2">
+                <strong>New Course:</strong> {selectedNewCourse?.Name}
+              </p>
+              <p className="mb-2">
+                <strong>Reschedule Fee:</strong> {rescheduleFee}
+              </p>
+            </div>
+            <p className="text-gray-700 mb-4">
+              By confirming, you agree to pay the additional fee (if any) and move
+              your enrollment to the new course.
+            </p>
+            {error && <p className="text-red-600 mb-4">{error}</p>}
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setStep(1)}
+                className="border border-gray-300 px-4 py-2 rounded hover:bg-gray-100"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Reschedule Confirmed</h1>
+            <p className="mb-4">Your enrollment has been rescheduled to:</p>
+            <div className="p-4 border border-blue-500 rounded">
+              <h2 className="text-xl font-bold">{selectedNewCourse?.Name}</h2>
+              <p>
+                <span>📍 </span>
+                {selectedNewCourse?.Location__r?.Name || selectedNewCourse?.Location__c || "Location N/A"}
+              </p>
+              <p>
+                <span>⏰ </span>
+                {selectedNewCourse?.Start_date_time__c ? (
+                  getDaysUntil(selectedNewCourse.Start_date_time__c) < 0 ? (
                     <span className="text-red-500">Course has passed</span>
                   ) : (
-                    <span>Days Until: {getDaysUntil(oldCourseStartDate)}</span>
+                    `Days Until: ${getDaysUntil(selectedNewCourse.Start_date_time__c)}`
                   )
                 ) : (
                   "Start date N/A"
                 )}
-              </div>
+              </p>
             </div>
-          </div>
-
-          {/* Future Courses Section */}
-          <h1 className="text-2xl mb-4">
-            Reschedule Your Course: {oldCourseName || "Unknown"}
-          </h1>
-
-          {/* Location Filter */}
-          <div className="mb-4">
-            <p className="text-gray-700 mb-2">Filter by Location:</p>
-            <div className="flex flex-wrap gap-2">
-              {uniqueLocations.map((loc) => (
-                <button
-                  key={loc.id}
-                  onClick={() => toggleLocation(loc.id)}
-                  className={`px-3 py-1 border rounded text-sm ${
-                    selectedLocations.includes(loc.id)
-                      ? "border-blue-500 text-blue-500"
-                      : "border-gray-300 text-gray-600"
-                  }`}
-                >
-                  {loc.name}
-                </button>
-              ))}
-            </div>
-            <hr className="mt-4 border-gray-300" />
-          </div>
-
-          <p className="text-gray-700 mb-4">
-            Please select one of the future courses to reschedule into:
-          </p>
-          {loading && <p className="text-gray-500">Loading future courses...</p>}
-          {error && <p className="text-red-600 mb-4">{error}</p>}
-
-          <div className="space-y-4 max-h-72 overflow-y-auto border border-gray-200 p-4 rounded">
-            {filteredCourses.map((course) => {
-              const hasPassed = course.DaysUntilStart < 0;
-              return (
-                <div
-                  key={course.Id}
-                  onClick={() => handleSelectCourse(course)}
-                  className={`card mb-2 p-4 border rounded-md cursor-pointer ${
-                    selectedNewCourse?.Id === course.Id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-300 bg-white"
-                  }`}
-                >
-                  <div className="card-header">
-                    <span className="text-[#0070d9] text-lg">
-                      {parseDateFromCourseName(course.Name || "Untitled Course")}
-                    </span>
-                  </div>
-                  <div className="card-body mt-0">
-                    <div className="flex items-center justify-between gap-6 mt-2 text-gray-600 h-auto">
-                      <div className="flex items-center gap-6">
-                        <div className="flex items-center">
-                          <span className="mr-2">📍</span>
-                          {course.Location__r?.Name || course.Location__c}
-                        </div>
-                        <div className="flex items-center">
-                          <span className="mr-2">⏰</span>
-                          {hasPassed ? (
-                            <span className="text-red-500">Course has passed</span>
-                          ) : (
-                            <span>
-                              Days Until: {getDaysUntil(course.Start_date_time__c)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col text-sm self-start">
-                        <button
-                          onClick={() => handleRescheduleClick(course)}
-                          className="px-3 py-1 border border-blue-500 text-blue-500 rounded hover:bg-blue-50"
-                        >
-                          Reschedule into this course
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 flex justify-center space-x-4">
             <button
-              onClick={handleKeepCurrent}
-              className="border border-gray-300 text-m px-2 py-1 rounded hover:bg-gray-100"
+              onClick={() => router.push('/courses')}
+              className="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             >
-              Nevermind, Keep My Course
+              Go to Courses
             </button>
           </div>
-        </>
-      )}
-
-      {step === 2 && (
-        <>
-          <h1 className="text-2xl font-bold mb-4">Confirm Reschedule</h1>
-          <div className="mb-4">
-            <p className="mb-2">
-              <strong>Old Course:</strong> {oldCourseName} (ID: {oldCourseId})
-            </p>
-            <p className="mb-2">
-              <strong>New Course:</strong> {selectedNewCourse?.Name}
-            </p>
-            <p className="mb-2">
-              <strong>Reschedule Fee:</strong> {rescheduleFee}
-            </p>
-          </div>
-          <p className="text-gray-700 mb-4">
-            By confirming, you agree to pay the additional fee (if any) and move
-            your enrollment to the new course.
-          </p>
-          {error && <p className="text-red-600 mb-4">{error}</p>}
-          <div className="flex justify-end space-x-4">
-            <button
-              onClick={() => setStep(1)}
-              className="border border-gray-300 px-4 py-2 rounded hover:bg-gray-100"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleConfirm}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              Confirm
-            </button>
-          </div>
-        </>
-      )}
-
-      {step === 3 && (
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Reschedule Confirmed</h1>
-          <p className="mb-4">Your enrollment has been rescheduled to:</p>
-          <div className="p-4 border border-blue-500 rounded">
-            <h2 className="text-xl font-bold">{selectedNewCourse?.Name}</h2>
-            <p>
-              <span>📍 </span>
-              {selectedNewCourse?.Location__r?.Name || selectedNewCourse?.Location__c || "Location N/A"}
-            </p>
-            <p>
-              <span>⏰ </span>
-              {selectedNewCourse?.Start_date_time__c ? (
-                getDaysUntil(selectedNewCourse.Start_date_time__c) < 0 ? (
-                  <span className="text-red-500">Course has passed</span>
-                ) : (
-                  `Days Until: ${getDaysUntil(selectedNewCourse.Start_date_time__c)}`
-                )
-              ) : (
-                "Start date N/A"
-              )}
-            </p>
-          </div>
-          <button
-            onClick={() => router.push('/courses')}
-            className="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Go to Courses
-          </button>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }
