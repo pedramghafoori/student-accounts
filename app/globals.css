@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile optimization */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+  
+  .footer-menu-item {
+    min-width: 60px; /* Adjusted for mobile */
+    padding: 0.5rem; /* Increased touch target */
+  }
+
+  .footer-menu-label {
+    font-size: 0.8125rem; /* Slightly larger than 0.75rem to prevent zoom */
+  }
+}
+
 .force-footer-bottom {
   position: fixed !important;
   top: auto !important;
