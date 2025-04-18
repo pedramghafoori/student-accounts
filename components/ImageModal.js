@@ -14,7 +14,7 @@ export default function ImageModal({ imageUrl, alt, onClose }) {
     <div 
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center overflow-y-auto"
       style={{ 
-        zIndex: 40
+        zIndex: 99999  // Much higher than force-footer-bottom
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -24,7 +24,7 @@ export default function ImageModal({ imageUrl, alt, onClose }) {
     >
       <div 
         className="relative bg-white rounded-lg p-4 w-full max-w-2xl shadow-xl animate-modal-appear mx-4"
-        style={{ zIndex: 41 }}
+        style={{ zIndex: 100000 }}  // Higher than overlay
         onClick={(e) => e.stopPropagation()}
       >
         <button 
