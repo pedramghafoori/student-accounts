@@ -12,7 +12,7 @@ export default function ImageModal({ imageUrl, alt, onClose }) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center overflow-y-auto"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center overflow-y-auto"
       style={{ 
         zIndex: 40
       }}
@@ -23,7 +23,7 @@ export default function ImageModal({ imageUrl, alt, onClose }) {
       }}
     >
       <div 
-        className="relative bg-white rounded-lg p-4 w-full max-w-2xl shadow-xl animate-modal-appear my-8 mx-4"
+        className="relative bg-white rounded-lg p-4 w-full max-w-2xl shadow-xl animate-modal-appear mx-4"
         style={{ zIndex: 41 }}
         onClick={(e) => e.stopPropagation()}
       >
