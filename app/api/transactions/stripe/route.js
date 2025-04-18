@@ -4,6 +4,10 @@ import Stripe from 'stripe';
 // We'll read STRIPE_SECRET_KEY from your environment
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// In-memory cache for Stripe data
+const stripeCache = new Map();
+const CACHE_TTL = 3600000; // 1 hour
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -13,6 +17,17 @@ export async function GET(request) {
         { success: false, message: 'No Stripe reference provided' },
         { status: 400 }
       );
+    }
+
+    // Check cache first
+    const cacheKey = `stripe:${reference}`;
+    const cachedData = stripeCache.get(cacheKey);
+    if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_TTL) {
+      return NextResponse.json({
+        success: true,
+        ...cachedData.data,
+        fromCache: true,
+      });
     }
 
     // Attempt to retrieve PaymentIntent, expand charges and payment method
@@ -96,20 +111,27 @@ export async function GET(request) {
       }
     }
 
-    console.log("[Stripe route] returning:", {
-      success: true,
+    const responseData = {
       reference,
       receiptUrl,
       cardType,
       last4,
+    };
+
+    // Cache the result
+    stripeCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now(),
+    });
+
+    console.log("[Stripe route] returning:", {
+      success: true,
+      ...responseData,
     });
 
     return NextResponse.json({
       success: true,
-      reference,
-      receiptUrl,
-      cardType,
-      last4,
+      ...responseData,
     });
   } catch (error) {
     console.error('Error in stripe route:', error);

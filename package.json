@@ -24,7 +24,8 @@
     "react-dom": "latest",
     "react-transition-group": "^4.4.5",
     "redis": "^4.7.0",
-    "stripe": "^18.0.0"
+    "stripe": "^18.0.0",
+    "swr": "^2.3.3"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",

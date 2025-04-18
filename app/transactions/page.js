@@ -1,61 +1,32 @@
 "use client";
 
-import React, { useEffect, useState, useContext } from "react";
+import React, { useState, useContext } from "react";
+import useSWR from 'swr';
 import axios from "axios";
 import { AppContext } from "../context/appcontext";
 import Header from "../../components/Header";
 import Image from 'next/image';
 
+// Create fetcher function for SWR
+const fetcher = url => axios.get(url).then(res => res.data);
+
 function ReceiptDisplay({ transaction }) {
-  const [receiptUrl, setReceiptUrl] = useState("");
-  const [cardType, setCardType] = useState("");
-  const [last4, setLast4] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
-
-  useEffect(() => {
-    // Check if transaction reference exists and has the expected format (starts with 'pi_')
-    if (!transaction.Transaction_Reference__c || !transaction.Transaction_Reference__c.startsWith('pi_')) {
-      setError("No valid payment reference available");
-      return;
+  // Use SWR for receipt data
+  const { data, error: receiptError, isLoading } = useSWR(
+    transaction.Transaction_Reference__c?.startsWith('pi_') 
+      ? `/api/transactions/stripe?reference=${transaction.Transaction_Reference__c}`
+      : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 3600000, // Cache for 1 hour
     }
+  );
 
-    const fetchReceipt = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const res = await axios.get(`/api/transactions/stripe?reference=${transaction.Transaction_Reference__c}`);
-        if (res.data.success) {
-          if (res.data.receiptUrl) setReceiptUrl(res.data.receiptUrl);
-          if (res.data.cardType) setCardType(res.data.cardType);
-          if (res.data.last4) setLast4(res.data.last4);
-        }
-      } catch (err) {
-        console.error("Error retrieving stripe receipt:", err);
-        // More specific error messages based on the error type
-        if (err.response?.status === 400) {
-          setError("Invalid payment reference");
-        } else if (err.response?.status === 404) {
-          setError("Payment record not found");
-        } else {
-          setError("Unable to load receipt details");
-        }
-        
-        // Only retry for network errors or 500s, not for 400s or 404s
-        if ((!err.response || err.response.status >= 500) && retryCount < 3) {
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-          }, Math.pow(2, retryCount) * 1000); // Exponential backoff
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReceipt();
-  }, [transaction.Transaction_Reference__c, retryCount]);
+  const receiptUrl = data?.receiptUrl;
+  const cardType = data?.cardType;
+  const last4 = data?.last4;
 
   const getCardLogo = (type) => {
     switch (type.toLowerCase()) {
@@ -90,25 +61,17 @@ function ReceiptDisplay({ transaction }) {
 
   return (
     <div className="mt-4">
-      {loading && (
+      {isLoading && (
         <div className="text-sm text-gray-500">Loading receipt details...</div>
       )}
       
-      {error && (
+      {receiptError && (
         <div className="text-sm text-red-500 flex items-center gap-2">
-          <span>{error}</span>
-          {retryCount < 3 && (
-            <button
-              onClick={() => setRetryCount(prev => prev + 1)}
-              className="text-blue-500 hover:text-blue-700 text-xs"
-            >
-              Retry
-            </button>
-          )}
+          <span>{receiptError.message}</span>
         </div>
       )}
 
-      {!loading && !error && (
+      {!isLoading && !receiptError && (
         <>
           <div className="flex items-center gap-2">
             {cardType && (
@@ -143,14 +106,24 @@ export default function ReceiptsPage() {
   const {
     selectedAccount,
     setSelectedAccount,
-    error,
-    registrations,
-    setRegistrations,
     sessionExpired,
     allAccounts,
   } = useContext(AppContext);
 
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+
+  // Use SWR for registrations data
+  const { data: registrationsData, error: registrationsError } = useSWR(
+    selectedAccount?.Id ? `/api/transactions/registrations?accountId=${selectedAccount.Id}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // Cache for 1 minute
+    }
+  );
+
+  const registrations = registrationsData?.records || [];
+  const error = registrationsError?.message;
 
   function handleSelect(accountId) {
     console.log("Select account:", accountId);
@@ -161,18 +134,6 @@ export default function ReceiptsPage() {
   function handleLogout() {
     console.log("Logout clicked");
   }
-
-  useEffect(() => {
-    if (!selectedAccount) return;
-    axios
-      .get(`/api/transactions/registrations?accountId=${selectedAccount.Id}`)
-      .then((res) => {
-        if (res.data.success) {
-          setRegistrations(res.data.records);
-        }
-      })
-      .catch((err) => console.error("Error retrieving registrations:", err));
-  }, [selectedAccount, setRegistrations]);
 
   if (!selectedAccount) {
     return (

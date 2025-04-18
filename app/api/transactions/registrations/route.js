@@ -3,6 +3,38 @@ import { NextResponse } from 'next/server';
 import jsforce from 'jsforce';
 import { getSystemTokensFromRedis, getOAuth2 } from '@/lib/salesforce';
 
+// Create a connection pool
+let connectionPool = null;
+let lastTokenRefresh = 0;
+const TOKEN_REFRESH_INTERVAL = 3600000; // 1 hour
+
+// In-memory cache for registrations
+const registrationsCache = new Map();
+const CACHE_TTL = 60000; // 1 minute
+
+async function getConnection() {
+  const now = Date.now();
+  
+  // Check if we need to refresh the connection
+  if (!connectionPool || (now - lastTokenRefresh) > TOKEN_REFRESH_INTERVAL) {
+    const { accessToken, refreshToken, instanceUrl } = await getSystemTokensFromRedis();
+    if (!accessToken || !refreshToken || !instanceUrl) {
+      throw new Error('Missing Salesforce tokens');
+    }
+
+    connectionPool = new jsforce.Connection({
+      oauth2: getOAuth2(),
+      accessToken,
+      refreshToken,
+      instanceUrl,
+    });
+    
+    lastTokenRefresh = now;
+  }
+  
+  return connectionPool;
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -14,25 +46,21 @@ export async function GET(request) {
       );
     }
 
-    // Retrieve tokens (adjust if you have your own logic for retrieving SF tokens)
-    const { accessToken, refreshToken, instanceUrl } = await getSystemTokensFromRedis();
-    if (!accessToken || !refreshToken || !instanceUrl) {
-      return NextResponse.json(
-        { success: false, message: 'Missing Salesforce tokens' },
-        { status: 500 }
-      );
+    // Check cache first
+    const cacheKey = `registrations:${accountId}`;
+    const cachedData = registrationsCache.get(cacheKey);
+    if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_TTL) {
+      return NextResponse.json({
+        success: true,
+        records: cachedData.records,
+        fromCache: true,
+      });
     }
 
-    // Create JSforce connection
-    const conn = new jsforce.Connection({
-      oauth2: getOAuth2(),
-      accessToken,
-      refreshToken,
-      instanceUrl,
-    });
+    // Get connection from pool
+    const conn = await getConnection();
 
-    // Query Opportunities (Registrations) with child Transactions__c records
-    // to retrieve Transaction_Reference__c
+    // Query Opportunities with child Transactions
     const soql = `
       SELECT
         Id,
@@ -55,12 +83,15 @@ export async function GET(request) {
       WHERE AccountId = '${accountId}'
       ORDER BY CloseDate DESC
     `;
-    console.log('[transactions/registrations] Running SOQL:', soql);
 
     const result = await conn.query(soql);
-    console.log('[transactions/registrations] SF query result:', result.totalSize, 'records');
 
-    // Transform to a simpler structure if desired, or return directly.
+    // Cache the result
+    registrationsCache.set(cacheKey, {
+      records: result.records,
+      timestamp: Date.now(),
+    });
+
     return NextResponse.json({
       success: true,
       records: result.records || [],
