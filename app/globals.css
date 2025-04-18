@@ -188,7 +188,37 @@ main {
 }
 
 .wave-svg path {
-  fill: #fcfcfd; /* Match the new lighter background color */
+  fill: #fcfcfd;
+}
+
+.wave-svg path:nth-child(1) {
+  animation: waveMoveRight 15s linear infinite;
+}
+
+.wave-svg path:nth-child(2) {
+  animation: waveMoveLeft 18s linear infinite;
+}
+
+.wave-svg path:nth-child(3) {
+  animation: waveMoveRight 20s linear infinite;
+}
+
+@keyframes waveMoveRight {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-25%);
+  }
+}
+
+@keyframes waveMoveLeft {
+  0% {
+    transform: translateX(-25%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
 }
 
 .my-modal-forced-size {
@@ -234,33 +264,4 @@ main {
   color: #ffffff; /* White text */
   
 
-}
-@keyframes waveMoveRight {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-25%);
-  }
-}
-
-@keyframes waveMoveLeft {
-  0% {
-    transform: translateX(-25%);
-  }
-  100% {
-    transform: translateX(0%);
-  }
-}
-
-.wave-svg path:nth-child(1) {
-  animation: waveMoveRight 4s ease-in-out infinite alternate;
-}
-
-.wave-svg path:nth-child(2) {
-  animation: waveMoveLeft 10s ease-in-out infinite alternate;
-}
-
-.wave-svg path:nth-child(3) {
-  animation: waveMoveRight 12s ease-in-out infinite alternate;
 }

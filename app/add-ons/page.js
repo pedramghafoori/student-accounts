@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../components/Header";
 import Image from "next/image";
+import ImageModal from "../../components/ImageModal";
 
 function AddOnsContent() {
   const router = useRouter();
@@ -21,6 +22,7 @@ function AddOnsContent() {
   const [required, setRequired] = useState([]);
   const [optional, setOptional] = useState([]);
   const [courseName, setCourseName] = useState("");
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     console.log("[AddOnProductsPage] Attempting to fetch add-ons by enrollmentId:", enrollmentId);
@@ -174,6 +176,14 @@ function AddOnsContent() {
         showBackButton={true}
       />
 
+      {selectedImage && (
+        <ImageModal
+          imageUrl={selectedImage.url}
+          alt={selectedImage.alt}
+          onClose={() => setSelectedImage(null)}
+        />
+      )}
+
       <div className="p-6 pb-28">
         {error && <div className="text-red-600 mb-4">Error: {error}</div>}
 
@@ -216,14 +226,23 @@ function AddOnsContent() {
             
             return (
               <div key={product.Id} className="bg-white border border-gray-200 rounded shadow p-4 flex flex-col h-full">
-                <div className="w-full mb-3">
+                <div 
+                  className="w-full mb-3 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImage({
+                      url: product.ProductPicture__c || "/placeholder.png",
+                      alt: product.Name
+                    });
+                  }}
+                >
                   <Image
                     src={product.ProductPicture__c || "/placeholder.png"}
                     alt={product.Name}
                     width={200}
                     height={150}
                     style={{ objectFit: "contain" }}
-                    className="w-full h-32 sm:h-auto"
+                    className="w-full h-64 sm:h-auto"
                   />
                 </div>
                 
