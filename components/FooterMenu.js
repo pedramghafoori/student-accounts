@@ -6,6 +6,7 @@ import Image from "next/image";
 
 export default function FooterMenu({ allUserAccounts = [] }) {
   const pathname = usePathname();
+
   function isActive(path) {
     return pathname === path;
   }

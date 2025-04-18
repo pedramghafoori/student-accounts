@@ -15,7 +15,11 @@ function ReceiptDisplay({ transaction }) {
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    if (!transaction.Transaction_Reference__c) return;
+    // Check if transaction reference exists and has the expected format (starts with 'pi_')
+    if (!transaction.Transaction_Reference__c || !transaction.Transaction_Reference__c.startsWith('pi_')) {
+      setError("No valid payment reference available");
+      return;
+    }
 
     const fetchReceipt = async () => {
       setLoading(true);
@@ -30,10 +34,17 @@ function ReceiptDisplay({ transaction }) {
         }
       } catch (err) {
         console.error("Error retrieving stripe receipt:", err);
-        setError("Unable to load receipt details");
+        // More specific error messages based on the error type
+        if (err.response?.status === 400) {
+          setError("Invalid payment reference");
+        } else if (err.response?.status === 404) {
+          setError("Payment record not found");
+        } else {
+          setError("Unable to load receipt details");
+        }
         
-        // Retry up to 3 times with increasing delays
-        if (retryCount < 3) {
+        // Only retry for network errors or 500s, not for 400s or 404s
+        if ((!err.response || err.response.status >= 500) && retryCount < 3) {
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
           }, Math.pow(2, retryCount) * 1000); // Exponential backoff

@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { useAccount } from "../context/AccountContext";
+import Header from "../../components/Header";
 
 // This component contains all the login logic and uses the useSearchParams hook
 function LoginContent() {
@@ -138,10 +139,15 @@ function LoginContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Top header */}
-      <div className="bg-blue-500 text-white text-center py-4">
-        <h1 className="text-lg font-semibold">Login</h1>
-      </div>
+      <Header 
+        selectedAccount={null}
+        headerTagline="Login"
+        accounts={[]}
+        showAccountDropdown={false}
+        setShowAccountDropdown={() => {}}
+        handleSelect={() => {}}
+        handleLogout={() => {}}
+      />
 
       {/* Logout message if reason is inactive */}
       {logoutMessage && (
