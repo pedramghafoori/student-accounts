@@ -69,7 +69,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-[#fcfcfd]">
         <Header 
           selectedAccount={null}
           headerTagline="Profile"
@@ -79,18 +79,18 @@ export default function ProfilePage() {
           handleSelect={handleSelect}
           handleLogout={handleLogout}
         />
-        <div className="container mx-auto px-4 py-8">
+        <main className="container mx-auto px-4 py-8 pb-28">
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
             <div className="text-center text-gray-500">Loading profile information...</div>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
 
   if (!selectedAccount) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-[#fcfcfd]">
         <Header 
           selectedAccount={null}
           headerTagline="Profile"
@@ -100,17 +100,17 @@ export default function ProfilePage() {
           handleSelect={handleSelect}
           handleLogout={handleLogout}
         />
-        <div className="container mx-auto px-4 py-8">
+        <main className="container mx-auto px-4 py-8 pb-28">
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
             <div className="text-center text-gray-500">Please select an account to view profile information</div>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#fcfcfd]">
       <Header 
         selectedAccount={selectedAccount}
         headerTagline="Profile"
@@ -120,7 +120,7 @@ export default function ProfilePage() {
         handleSelect={handleSelect}
         handleLogout={handleLogout}
       />
-      <div className="container mx-auto px-4 py-8 pb-16">
+      <main className="container mx-auto px-4 py-8 pb-28">
         <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
           <div className="flex flex-col items-center mb-6">
             <svg
@@ -177,7 +177,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 } 
