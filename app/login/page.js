@@ -138,7 +138,7 @@ function LoginContent() {
   `;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col">
       <Header 
         selectedAccount={null}
         headerTagline="Login"
@@ -156,14 +156,14 @@ function LoginContent() {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col items-center justify-center px-4">
+      <div className="flex-1 flex flex-col items-center pt-8 px-4">
         <div className="w-full max-w-sm bg-white border border-gray-200 p-6 rounded-lg shadow-lg">
-          <h2 className="text-xl font-semibold text-center text-gray-800 mb-8">
+          <h2 className="text-xl font-semibold text-center text-gray-800 mb-6">
             Welcome to Self-Serve Portal
           </h2>
 
           {step === "EMAIL" && (
-            <p className="text-center text-sm text-gray-600 mb-8">
+            <p className="text-center text-sm text-gray-600 mb-6">
               Please enter the email you used during registration, and we&apos;ll send you a link or OTP.
             </p>
           )}

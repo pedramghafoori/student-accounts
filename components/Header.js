@@ -18,7 +18,7 @@ export default function Header({
 
   return (
     <>
-      <header className="header-wave-parent relative bg-blue-500 text-white">
+      <header className="header-wave-parent relative bg-gradient-to-br from-blue-700 via-blue-600 to-blue-500 text-white">
         <div
           className="absolute inset-0 p-6 flex items-center justify-between"
           style={{ zIndex: 2 }}
@@ -75,9 +75,9 @@ export default function Header({
 
         <div className="absolute inset-x-0 bottom-0" style={{ zIndex: 1 }}>
           <svg className="wave-svg" viewBox="0 0 1440 320" preserveAspectRatio="none">
-            <path fill="#ffffff" fillOpacity="0.2" d="M-360,160 C0,20 360,300 720,160 C1080,20 1440,300 1800,160 L1800,320 L-360,320 Z" />
-            <path fill="#ffffff" fillOpacity="0.4" d="M-360,192 C0,52 360,332 720,192 C1080,52 1440,332 1800,192 L1800,320 L-360,320 Z" />
-            <path fill="#ffffff" d="M-360,224 C0,84 360,364 720,224 C1080,84 1440,364 1800,224 L1800,320 L-360,320 Z" />
+            <path fill="#fcfcfd" fillOpacity="0.2" d="M-360,160 C0,20 360,300 720,160 C1080,20 1440,300 1800,160 L1800,320 L-360,320 Z" />
+            <path fill="#fcfcfd" fillOpacity="0.4" d="M-360,192 C0,52 360,332 720,192 C1080,52 1440,332 1800,192 L1800,320 L-360,320 Z" />
+            <path fill="#fcfcfd" d="M-360,224 C0,84 360,364 720,224 C1080,84 1440,364 1800,224 L1800,320 L-360,320 Z" />
           </svg>
         </div>
       </header>

@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global background color */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  background-color: #fcfcfd; /* Much lighter grey, almost white */
+}
+
 /* Mobile optimization */
 @media (max-width: 768px) {
   input, select, textarea {
@@ -31,6 +38,7 @@
 main {
   padding-bottom: calc(72px + 2.5rem) !important; /* Footer height (72px) + extra space (2.5rem) */
   overflow-x: hidden;
+  background-color: #f9fafb; /* Match the global background */
 }
 
 /* Pin the footer to the bottom of the screen */
@@ -118,6 +126,8 @@ main {
   position: relative;
   background-color: #255e8d;
   min-height: 200px;
+  overflow: hidden;
+  margin-bottom: -2px; /* Remove any potential gap */
 }
 
 .my-header {
@@ -132,14 +142,20 @@ main {
 
 .wave-svg {
   position: absolute;
-  bottom: 0;
+  bottom: -2px; /* Ensure wave connects with content */
   left: 0;
   width: 200%;
   height: 120px;
   overflow: hidden;
   transform: translateX(-25%);
   pointer-events: none;
+  display: block; /* Ensure proper rendering */
 }
+
+.wave-svg path {
+  fill: #fcfcfd; /* Match the new lighter background color */
+}
+
 .my-modal-forced-size {
   /* Force a fixed size in pixels */
   width: 400px !important;
@@ -212,9 +228,4 @@ main {
 
 .wave-svg path:nth-child(3) {
   animation: waveMoveRight 12s ease-in-out infinite alternate;
-}
-
-html, body {
-  overflow-x: hidden;
-  width: 100%;
 }
