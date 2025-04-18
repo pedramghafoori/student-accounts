@@ -1,14 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Image from 'next/image';
 
 export default function ImageModal({ imageUrl, alt, onClose }) {
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center overflow-y-auto"
       style={{ 
-        zIndex: 40,
-        height: '100vh',
-        overflowY: 'auto'
+        zIndex: 40
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -17,7 +23,7 @@ export default function ImageModal({ imageUrl, alt, onClose }) {
       }}
     >
       <div 
-        className="relative bg-white rounded-lg p-4 w-full max-w-2xl shadow-xl animate-modal-appear my-auto"
+        className="relative bg-white rounded-lg p-4 w-full max-w-2xl shadow-xl animate-modal-appear my-8 mx-4"
         style={{ zIndex: 41 }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -33,7 +39,7 @@ export default function ImageModal({ imageUrl, alt, onClose }) {
             alt={alt}
             width={600}
             height={400}
-            className="w-full object-contain"
+            className="w-full object-contain rounded-lg"
             priority
           />
         </div>
