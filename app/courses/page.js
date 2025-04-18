@@ -382,7 +382,7 @@ export default function CoursesPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="space-y-4"
+            className="space-y-4 flex flex-col items-center"
           >
             {filteredCourses.map((enrollment) => {
               let displayedCourseName = "";
@@ -447,33 +447,40 @@ export default function CoursesPage() {
               return (
                 <div
                   key={enrollment.Id}
-                  className="card mb-4 p-4 border border-gray-300 rounded-md"
+                  className="card mb-4 p-4 border border-gray-300 rounded-md bg-white shadow-sm w-full max-w-2xl"
                 >
-                  <div className="card-header">
-                    <span className="text-[#0070d9] font-bold text-lg">
+                  {/* Header Row: Title and Time */}
+                  <div className="flex justify-between items-center mb-3">
+                    {/* Course Title */}
+                    <span className="text-[#0070d9] font-bold text-lg truncate mr-4">
                       {displayedCourseName}
                     </span>
+                    {/* Time Info (Moved Up) */}
+                    <div className="flex items-center text-sm text-gray-600 flex-shrink-0">
+                      <span className="mr-1.5">⏰</span>
+                      {displayedDaysUntilStart < 0
+                        ? "Course has passed"
+                        : formatDays(displayedDaysUntilStart)}
+                    </div>
                   </div>
-                  <div className="card-body mt-3">
-                    <div className="flex items-center justify-between flex-wrap gap-6 mt-2">
-                      <div className="flex items-center gap-6">
+
+                  {/* Body Row: Date/Location and Actions */}
+                  <div className="mt-2"> 
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                      {/* Date & Location Group (Moved Down) */}
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
                         <div className="flex items-center">
-                          <span className="mr-2">📅</span>
+                          <span className="mr-1.5">📅</span>
                           {displayedDates}
                         </div>
                         <div className="flex items-center">
-                          <span className="mr-2">📍</span>
+                          <span className="mr-1.5">📍</span>
                           {displayedLocation}
-                        </div>
-                        <div className="flex items-center">
-                          <span className="mr-2">⏰</span>
-                          {displayedDaysUntilStart < 0
-                            ? "Course has passed"
-                            : formatDays(displayedDaysUntilStart)}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs">
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 text-xs">
                         {displayedDaysUntilStart >
                         (policy?.daysBeforeReschedule ?? 0) ? (
                           <>

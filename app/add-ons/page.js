@@ -174,7 +174,7 @@ function AddOnsContent() {
         showBackButton={true}
       />
 
-      <div className="p-6">
+      <div className="p-6 pb-28">
         {error && <div className="text-red-600 mb-4">Error: {error}</div>}
 
         <div className="bg-white shadow p-2 rounded mb-6">
