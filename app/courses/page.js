@@ -508,7 +508,7 @@ export default function CoursesPage() {
                                   "Unknown course";
 
                                 router.push(
-                                  `/reschedule?courseType=${encodeURIComponent(courseName)}&oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${enrollment.BatchId}&enrollmentId=${enrollment.Id}&enrollmentIds=${JSON.stringify(newEnrollments)}&oldCourseLocation=${encodeURIComponent(displayedLocation)}&oldCourseStartDate=${encodeURIComponent(enrollment.Start_date_time__c || '')}`
+                                  `/reschedule?courseType=${encodeURIComponent(courseName)}&oldCourseName=${encodeURIComponent(courseName)}&oldCourseId=${encodeURIComponent(enrollment.BatchId)}&enrollmentId=${encodeURIComponent(enrollment.Id)}&enrollmentIds=${encodeURIComponent(JSON.stringify(newEnrollments))}&oldCourseDates=${encodeURIComponent(displayedDates || "")}&oldCourseLocation=${encodeURIComponent(displayedLocation)}&oldCourseStartDate=${encodeURIComponent(enrollment.StartDateTime || "")}`
                                 );
                               }}
                               className="text-blue-500 underline"

@@ -6,7 +6,6 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import axios from "axios";
 import Header from "../../components/Header";
-import { CalendarIcon } from "@heroicons/react/24/outline";
 
 function parseDateFromCourseName(fullName = "") {
   const match = fullName.match(/^([A-Za-z]+\s+\d{1,2}\s*-\s*(?:[A-Za-z]+\s+)?\d{1,2})/);
@@ -32,13 +31,15 @@ export function RescheduleImpl() {
   const enrollmentId = searchParams.get("enrollmentId");
   const oldCourseLocation = searchParams.get("oldCourseLocation");
   const oldCourseStartDate = searchParams.get("oldCourseStartDate") || "";
+  const oldCourseDates = searchParams.get("oldCourseDates") || "";
 
   console.log("[RescheduleImpl] URL Parameters:", {
     oldCourseName,
     oldCourseId,
     enrollmentId,
     oldCourseLocation,
-    oldCourseStartDate
+    oldCourseStartDate,
+    oldCourseDates
   });
 
   const enrollmentIdsParam = searchParams.get("enrollmentIds");
@@ -203,22 +204,25 @@ export function RescheduleImpl() {
               </p>
               <div className="flex items-center gap-6 mt-2 text-gray-600">
                 <div className="flex items-center">
+                  <span className="mr-2">📅</span>
+                  {oldCourseDates || "Date N/A"}
+                </div>
+                <div className="flex items-center">
                   <span className="mr-2">📍</span>
                   {oldCourseLocation || "Location N/A"}
                 </div>
                 <div className="flex items-center gap-2">
-                  <CalendarIcon className="h-5 w-5 text-gray-500" />
+                  <span className="text-gray-500">⏰</span>
                   <span className="text-sm text-gray-600">
-                    {oldCourseStartDate ? formatDate(oldCourseStartDate) : "N/A"}
+                    {oldCourseStartDate
+                      ? (getDaysUntil(oldCourseStartDate) < 0
+                          ? "Course has passed"
+                          : `Starts in ${getDaysUntil(oldCourseStartDate)}`)
+                      : "N/A"}
                   </span>
                 </div>
               </div>
             </div>
-
-            {/* Future Courses Section */}
-            <h1 className="text-2xl mb-4">
-              Reschedule Your Course: {oldCourseName || "Unknown"}
-            </h1>
 
             {/* Location Filter */}
             <div className="mb-4">
@@ -241,9 +245,7 @@ export function RescheduleImpl() {
               <hr className="mt-4 border-gray-300" />
             </div>
 
-            <p className="text-gray-700 mb-4">
-              Please select one of the future courses to reschedule into:
-            </p>
+            
             {loading && <p className="text-gray-500">Loading future courses...</p>}
             {error && <p className="text-red-600 mb-4">{error}</p>}
 
@@ -278,7 +280,7 @@ export function RescheduleImpl() {
                               <span className="text-red-500">Course has passed</span>
                             ) : (
                               <span>
-                                Days Until: {getDaysUntil(course.Start_date_time__c)}
+                                Starts in {getDaysUntil(course.Start_date_time__c)}
                               </span>
                             )}
                           </div>
