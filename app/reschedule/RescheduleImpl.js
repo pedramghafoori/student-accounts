@@ -304,23 +304,73 @@ export function RescheduleImpl() {
 
         {step === 2 && (
           <>
-            <h1 className="text-2xl font-bold mb-4">Confirm Reschedule</h1>
-            <div className="mb-4">
-              <p className="mb-2">
-                <strong>Old Course:</strong> {oldCourseName} (ID: {oldCourseId})
-              </p>
-              <p className="mb-2">
-                <strong>New Course:</strong> {selectedNewCourse?.Name}
-              </p>
-              <p className="mb-2">
+            <h1 className="text-2xl font-bold text-center mb-6">
+              Confirm Your Reschedule
+            </h1>
+
+            {/* Course comparison cards */}
+            <div className="grid gap-6 mb-8 sm:grid-cols-2">
+              {/* Old course card */}
+              <div className="border-2 border-red-500 bg-red-50 rounded-lg p-5 shadow-md">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-red-700">
+                  ❌ Old Course
+                </h2>
+                <p className="mt-2 font-bold">{oldCourseName}</p>
+                <div className="mt-2 flex flex-col gap-1 text-sm text-gray-700">
+                  <span>📅 {oldCourseDates || "Date N/A"}</span>
+                  <span>📍 {oldCourseLocation || "Location N/A"}</span>
+                  <span>
+                    ⏰{" "}
+                    {oldCourseStartDate
+                      ? getDaysUntil(oldCourseStartDate) < 0
+                        ? "Course has passed"
+                        : `Starts in ${getDaysUntil(oldCourseStartDate)}`
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
+
+              {/* New course card */}
+              <div className="border-2 border-green-600 bg-green-50 rounded-lg p-5 shadow-md">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-green-700">
+                  ✅ New Course
+                </h2>
+                <p className="mt-2 font-bold">
+                  {selectedNewCourse?.Name || "New course not selected"}
+                </p>
+                {selectedNewCourse && (
+                  <div className="mt-2 flex flex-col gap-1 text-sm text-gray-700">
+                    <span>📅 {parseDateFromCourseName(selectedNewCourse.Name || "")}</span>
+                    <span>📍 {selectedNewCourse?.Location__r?.Name || selectedNewCourse?.Location__c || "Location N/A"}</span>
+                    <span>
+                      ⏰{" "}
+                      {selectedNewCourse?.Start_date_time__c
+                        ? getDaysUntil(selectedNewCourse.Start_date_time__c) < 0
+                          ? "Course has passed"
+                          : `Starts in ${getDaysUntil(selectedNewCourse.Start_date_time__c)}`
+                        : "N/A"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Fee & disclaimer */}
+            <div className="mb-6 text-center">
+              <p className="text-lg">
                 <strong>Reschedule Fee:</strong> {rescheduleFee}
               </p>
+              <p className="text-gray-700 mt-2">
+                By confirming, you agree to pay any additional fee and move your
+                enrollment to the new course.
+              </p>
             </div>
-            <p className="text-gray-700 mb-4">
-              By confirming, you agree to pay the additional fee (if any) and move
-              your enrollment to the new course.
-            </p>
-            {error && <p className="text-red-600 mb-4">{error}</p>}
+
+            {/* Error display if any */}
+            {error && (
+              <p className="text-red-600 mb-4 text-center font-medium">{error}</p>
+            )}
+
             <div className="flex justify-end space-x-4">
               <button
                 onClick={() => setStep(1)}
@@ -330,7 +380,8 @@ export function RescheduleImpl() {
               </button>
               <button
                 onClick={handleConfirm}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                disabled={!selectedNewCourse}
               >
                 Confirm
               </button>
