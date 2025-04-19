@@ -1,34 +1,40 @@
 "use client";
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 
 function ConfirmContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
+  const [error, setError] = useState(null);
 
   const handleConfirm = async () => {
     try {
+      setError(null);
       const formData = new FormData();
       formData.append('token', token);
 
       const response = await fetch('/api/auth/magic-link', {
         method: 'POST',
         body: formData,
+        redirect: 'follow'
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to confirm login');
+      if (response.url.includes('/courses')) {
+        window.location.href = '/courses';
+      } else if (!response.ok) {
+        const data = await response.json();
+        if (data.message === 'This link has already been used') {
+          throw new Error('This login link has already been used. You are already logged in. Click here to go to your courses.');
+        } else {
+          throw new Error(data.message || 'Failed to confirm login');
+        }
       }
-
-      const data = await response.json();
-      
-      // Redirect to courses after successful confirmation
-      router.push('/courses');
       
     } catch (error) {
       console.error('Error confirming login:', error);
+      setError(error.message);
     }
   };
 
@@ -43,6 +49,21 @@ function ConfirmContent() {
             Click the button below to complete your login
           </p>
         </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span className="block sm:inline">{error}</span>
+            {error.includes('already been used') && (
+              <div className="mt-4 text-center">
+                <a 
+                  href="/courses" 
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  Go to Courses
+                </a>
+              </div>
+            )}
+          </div>
+        )}
         <div>
           <button
             onClick={handleConfirm}
@@ -58,11 +79,7 @@ function ConfirmContent() {
 
 export default function ConfirmPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-gray-500">Loading...</div>
-      </div>
-    }>
+    <Suspense fallback={<div>Loading...</div>}>
       <ConfirmContent />
     </Suspense>
   );
