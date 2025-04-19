@@ -88,7 +88,8 @@ export default function Header({
           style={{ 
             zIndex: 40,
             height: '100vh',
-            overflowY: 'auto'
+            overflowY: 'auto',
+            touchAction: 'none'
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -98,7 +99,10 @@ export default function Header({
         >
           <div 
             className="relative bg-white rounded-lg p-6 w-full max-w-md shadow-xl animate-modal-appear my-auto"
-            style={{ zIndex: 41 }}
+            style={{ 
+              zIndex: 41,
+              touchAction: 'none'
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold mb-2 text-center">Accounts</h2>
