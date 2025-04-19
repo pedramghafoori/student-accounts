@@ -3,6 +3,7 @@ import './globals.css';
 import AppProvider from './context/appcontext';
 import { AccountProvider } from './context/AccountContext';
 import FooterMenu from '../components/FooterMenu';
+import { headers } from 'next/headers';
 
 export const metadata = {
   title: 'Student Portal',
@@ -16,6 +17,10 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  const headersList = headers();
+  const pathname = headersList.get('x-pathname') || '';
+  const isLoginPage = pathname === '/login';
+
   return (
     <html lang="en">
       <head>
@@ -27,7 +32,7 @@ export default function RootLayout({ children }) {
             <div className="ios-page-transition">
               {children}
             </div>
-            <FooterMenu />
+            {!isLoginPage && <FooterMenu />}
           </AppProvider>
         </AccountProvider>
       </body>

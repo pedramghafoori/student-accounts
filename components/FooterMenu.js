@@ -7,6 +7,11 @@ import Image from "next/image";
 export default function FooterMenu({ allUserAccounts = [] }) {
   const pathname = usePathname();
 
+  // Hide footer on the login pages
+  if (pathname === "/login" || pathname.startsWith("/login/")) {
+    return null;
+  }
+
   function isActive(path) {
     return pathname === path;
   }
