@@ -64,7 +64,7 @@ export async function middleware(request) {
   }
 
   // Allow access to public paths
-  if (publicPaths.includes(request.nextUrl.pathname)) {
+  if (isPublicPath(request.nextUrl.pathname)) {
     console.log('[Middleware] Path', request.nextUrl.pathname, 'is public, allowing access');
     return NextResponse.next();
   }
@@ -75,6 +75,7 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  // Allow access to protected paths for authenticated users
   return NextResponse.next();
 }
 
