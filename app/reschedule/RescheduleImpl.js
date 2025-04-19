@@ -6,6 +6,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import axios from "axios";
 import Header from "../../components/Header";
+import { CalendarIcon } from "@heroicons/react/24/outline";
 
 function parseDateFromCourseName(fullName = "") {
   const match = fullName.match(/^([A-Za-z]+\s+\d{1,2}\s*-\s*(?:[A-Za-z]+\s+)?\d{1,2})/);
@@ -30,7 +31,15 @@ export function RescheduleImpl() {
   const oldCourseId = searchParams.get("oldCourseId");
   const enrollmentId = searchParams.get("enrollmentId");
   const oldCourseLocation = searchParams.get("oldCourseLocation");
-  const oldCourseStartDate = searchParams.get("oldCourseStartDate");
+  const oldCourseStartDate = searchParams.get("oldCourseStartDate") || "";
+
+  console.log("[RescheduleImpl] URL Parameters:", {
+    oldCourseName,
+    oldCourseId,
+    enrollmentId,
+    oldCourseLocation,
+    oldCourseStartDate
+  });
 
   const enrollmentIdsParam = searchParams.get("enrollmentIds");
   let parsedEnrollmentIds = [];
@@ -113,7 +122,32 @@ export function RescheduleImpl() {
     const start = new Date(startDate);
     const today = new Date();
     const diffTime = start.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return -1;
+    
+    const weeks = Math.floor(diffDays / 7);
+    const days = diffDays % 7;
+    
+    if (weeks === 0) {
+      return `${days} days`;
+    } else if (days === 0) {
+      return `${weeks} week${weeks > 1 ? 's' : ''}`;
+    } else {
+      return `${weeks} week${weeks > 1 ? 's' : ''}, ${days} day${days > 1 ? 's' : ''}`;
+    }
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return "Start date N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   async function handleConfirm() {
@@ -172,17 +206,11 @@ export function RescheduleImpl() {
                   <span className="mr-2">📍</span>
                   {oldCourseLocation || "Location N/A"}
                 </div>
-                <div className="flex items-center">
-                  <span className="mr-2">⏰</span>
-                  {oldCourseStartDate ? (
-                    getDaysUntil(oldCourseStartDate) < 0 ? (
-                      <span className="text-red-500">Course has passed</span>
-                    ) : (
-                      <span>Days Until: {getDaysUntil(oldCourseStartDate)}</span>
-                    )
-                  ) : (
-                    "Start date N/A"
-                  )}
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5 text-gray-500" />
+                  <span className="text-sm text-gray-600">
+                    {oldCourseStartDate ? formatDate(oldCourseStartDate) : "N/A"}
+                  </span>
                 </div>
               </div>
             </div>

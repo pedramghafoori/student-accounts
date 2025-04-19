@@ -55,7 +55,9 @@ export async function POST(request) {
     // 1) SEND OTP
     // ----------------------
     if (action === 'send-otp') {
+      console.log('Starting OTP send process for email:', email);
       if (!email) {
+        console.log('No email provided for OTP');
         return NextResponse.json(
           { success: false, message: 'Email is required' },
           { status: 400 }
@@ -65,10 +67,16 @@ export async function POST(request) {
       // 1A) Get system tokens from Redis
       let accessToken, refreshToken, instanceUrl;
       try {
+        console.log('Attempting to get system tokens from Redis...');
         const tokens = await getSystemTokensFromRedis();
         accessToken = tokens.accessToken;
         refreshToken = tokens.refreshToken;
         instanceUrl = tokens.instanceUrl;
+        console.log('Retrieved tokens from Redis:', { 
+          accessToken: accessToken ? 'present' : 'missing',
+          refreshToken: refreshToken ? 'present' : 'missing',
+          instanceUrl: instanceUrl ? 'present' : 'missing'
+        });
       } catch (rErr) {
         console.error('Error reading Redis for system tokens:', rErr);
         return NextResponse.json(
@@ -78,6 +86,7 @@ export async function POST(request) {
       }
 
       if (!accessToken || !refreshToken || !instanceUrl) {
+        console.error('Missing Salesforce tokens:', { accessToken, refreshToken, instanceUrl });
         return NextResponse.json(
           { success: false, message: 'System user tokens are not set yet' },
           { status: 500 }
@@ -87,12 +96,14 @@ export async function POST(request) {
       // 1B) Connect to Salesforce w/ existing OAuth tokens
       let conn;
       try {
+        console.log('Attempting to connect to Salesforce...');
         conn = new jsforce.Connection({
           oauth2: getOAuth2(),
           accessToken,
           refreshToken,
           instanceUrl,
         });
+        console.log('Salesforce connection established');
       } catch (sfConnErr) {
         console.error('SF Connection init error:', sfConnErr);
         return NextResponse.json(
@@ -108,9 +119,11 @@ export async function POST(request) {
         WHERE PersonEmail = '${email}'
         LIMIT 1
       `;
+      console.log('Querying Salesforce for email:', email);
       let result;
       try {
         result = await conn.query(querySF);
+        console.log('Salesforce query result:', result);
       } catch (sfQueryErr) {
         console.error('Salesforce query error:', sfQueryErr);
         return NextResponse.json(
@@ -120,6 +133,7 @@ export async function POST(request) {
       }
 
       if (result.totalSize === 0) {
+        console.log('No Salesforce account found for email:', email);
         return NextResponse.json(
           {
             success: false,
@@ -132,8 +146,10 @@ export async function POST(request) {
       // 1D) Generate & store OTP in Postgres
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const expiryTimestamp = new Date(Date.now() + 5 * 60_000); // 5 minutes
+      console.log('Generated OTP:', code, 'Expires at:', expiryTimestamp);
 
       try {
+        console.log('Storing OTP in database...');
         await prisma.otpRecord.create({
           data: {
             email,
@@ -142,6 +158,7 @@ export async function POST(request) {
             used: false,
           },
         });
+        console.log('OTP stored successfully');
       } catch (dbErr) {
         console.error('DB error creating OTP record:', dbErr);
         return NextResponse.json(
@@ -153,6 +170,7 @@ export async function POST(request) {
       // 1E) Send OTP via email
       let transporter;
       try {
+        console.log('Creating email transporter...');
         transporter = nodemailer.createTransport({
           host: process.env.EMAIL_HOST,
           port: Number(process.env.EMAIL_PORT),
@@ -162,6 +180,7 @@ export async function POST(request) {
             pass: process.env.EMAIL_PASS,
           },
         });
+        console.log('Email transporter created');
       } catch (mailErr) {
         console.error('Nodemailer transporter init error:', mailErr);
         return NextResponse.json(
@@ -171,12 +190,14 @@ export async function POST(request) {
       }
 
       try {
+        console.log('Sending OTP email...');
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
           to: email,
           subject: 'Your OTP Code',
           text: `Your login code is ${code}. It expires in 5 minutes.`,
         });
+        console.log('OTP email sent successfully');
       } catch (sendMailErr) {
         console.error('Error sending OTP email:', sendMailErr);
         return NextResponse.json(
