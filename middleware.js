@@ -4,6 +4,7 @@ import { jwtVerify } from 'jose';
 // List of public paths that don't require authentication
 const publicPaths = [
   '/login',
+  '/api/auth',
   '/api/auth/send-otp',
   '/api/auth/verify-otp',
   '/api/auth/send-magic-link',

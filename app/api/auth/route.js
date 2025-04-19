@@ -442,9 +442,9 @@ export async function POST(request) {
       }
 
       // 3F) Build the magic link URL
-      const requestUrl = new URL(request.url);
-      const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
-      const magicLinkUrl = `${baseUrl}/api/auth/magic-link?token=${magicToken}`;
+      const magicLinkUrl = process.env.NODE_ENV === 'production'
+        ? `https://accounts.lifeguardingacademy.com/api/auth/magic-link?token=${magicToken}`
+        : `${process.env.APP_URL}/api/auth/magic-link?token=${magicToken}`;
 
       // 3G) Send the magic link via email
       let transporter;
